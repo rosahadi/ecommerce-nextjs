@@ -28,28 +28,28 @@ export const shippingAddressDefaultValues = {
   country: "",
 };
 
-export const PAYMENT_METHODS = process.env.PAYMENT_METHODS
-  ? process.env.PAYMENT_METHODS.split(", ")
-  : ["PayPal", "Stripe", "CashOnDelivery"];
-export const DEFAULT_PAYMENT_METHOD =
-  process.env.DEFAULT_PAYMENT_METHOD || "PayPal";
-
 export const PAGE_SIZE =
   Number(process.env.PAGE_SIZE) || 12;
 
 export const productDefaultValues = {
   name: "",
   slug: "",
-  category: "",
+  category: [],
+  targetAudience: "MEN",
   images: [],
-  brand: "",
   description: "",
-  price: "0",
   stock: 0,
+  status: "IN_STOCK",
+  price: "0",
+  salePrice: null,
+  discountPercent: null,
   rating: "0",
-  numReviews: "0",
-  isFeatured: false,
-  banner: null,
+  numReviews: 0,
+  color: null,
+  size: null,
+  material: null,
+  isNew: false,
+  bestSeller: false,
 };
 
 export const USER_ROLES = process.env.USER_ROLES
