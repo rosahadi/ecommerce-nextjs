@@ -2,12 +2,12 @@ import { z } from "zod";
 import { formatNumberWithDecimal } from "./utils";
 
 // Enums based on Prisma models
-enum TargetAudience {
+export enum TargetAudience {
   MEN = "MEN",
   WOMEN = "WOMEN",
 }
 
-enum ProductStatus {
+export enum ProductStatus {
   IN_STOCK = "IN_STOCK",
   LOW_STOCK = "LOW_STOCK",
   OUT_OF_STOCK = "OUT_OF_STOCK",
@@ -15,7 +15,7 @@ enum ProductStatus {
   PRE_ORDER = "PRE_ORDER",
 }
 
-enum Size {
+export enum Size {
   XXS = "XXS",
   XS = "XS",
   S = "S",
@@ -26,7 +26,7 @@ enum Size {
   XXXL = "XXXL",
 }
 
-enum OrderStatus {
+export enum OrderStatus {
   PENDING = "PENDING",
   PROCESSING = "PROCESSING",
   SHIPPED = "SHIPPED",
@@ -34,7 +34,7 @@ enum OrderStatus {
   CANCELLED = "CANCELLED",
 }
 
-enum PaymentMethod {
+export enum PaymentMethod {
   PAYPAL = "PAYPAL",
   STRIPE = "STRIPE",
   CASH_ON_DELIVERY = "CASH_ON_DELIVERY",
@@ -94,7 +94,7 @@ export const productSchema = z.object({
   rating: z.number().min(0).max(5).default(0),
   numReviews: z.number().int().nonnegative().default(0),
   color: z.string().optional().nullable(),
-  size: z.nativeEnum(Size).optional().nullable(),
+  size: z.array(z.nativeEnum(Size)).optional().nullable(),
   material: z.string().optional().nullable(),
   isNew: z.boolean().default(false),
   bestSeller: z.boolean().default(false),

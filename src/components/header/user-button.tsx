@@ -14,7 +14,7 @@ const UserButton = () => {
     user: {
       name: "John Doe",
       email: "john@example.com",
-      role: "user",
+      role: "admin",
     },
   };
 
