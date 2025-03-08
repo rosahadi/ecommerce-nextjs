@@ -1,44 +1,12 @@
 import { z } from "zod";
 import { formatNumberWithDecimal } from "./utils";
-
-// Enums based on Prisma models
-export enum TargetAudience {
-  MEN = "MEN",
-  WOMEN = "WOMEN",
-}
-
-export enum ProductStatus {
-  IN_STOCK = "IN_STOCK",
-  LOW_STOCK = "LOW_STOCK",
-  OUT_OF_STOCK = "OUT_OF_STOCK",
-  DISCONTINUED = "DISCONTINUED",
-  PRE_ORDER = "PRE_ORDER",
-}
-
-export enum Size {
-  XXS = "XXS",
-  XS = "XS",
-  S = "S",
-  M = "M",
-  L = "L",
-  XL = "XL",
-  XXL = "XXL",
-  XXXL = "XXXL",
-}
-
-export enum OrderStatus {
-  PENDING = "PENDING",
-  PROCESSING = "PROCESSING",
-  SHIPPED = "SHIPPED",
-  DELIVERED = "DELIVERED",
-  CANCELLED = "CANCELLED",
-}
-
-export enum PaymentMethod {
-  PAYPAL = "PAYPAL",
-  STRIPE = "STRIPE",
-  CASH_ON_DELIVERY = "CASH_ON_DELIVERY",
-}
+import {
+  OrderStatus,
+  PaymentMethod,
+  ProductStatus,
+  Size,
+  TargetAudience,
+} from "@prisma/client";
 
 // Utility schemas
 const currency = z
@@ -114,7 +82,11 @@ export const insertProductSchema = productSchema
   .extend({
     price: currency,
     salePrice: currency.optional(),
-    rating: z.string().default("0"),
+    rating: z
+      .string()
+      .default("0")
+      .transform((val) => Number(val)),
+    size: z.array(z.nativeEnum(Size)).default([]),
   });
 
 export const updateProductSchema =
@@ -208,26 +180,25 @@ export const verificationTokenSchema = z.object({
 
 // Cart and CartItem schemas
 export const cartItemSchema = z.object({
-  id: uuid.optional(),
-  cartId: uuid.optional(),
+  id: z.string().optional(),
+  cartId: z.string().optional(),
   productId: z.string().min(1, "Product is required"),
   quantity: z
     .number()
     .int()
     .positive("Quantity must be positive")
-    .default(1),
-  color: z.string().optional().nullable(),
-  size: z.nativeEnum(Size).optional().nullable(),
-  // Extended fields for frontend use
-  name: z.string().min(1, "Name is required").optional(),
-  slug: z.string().min(1, "Slug is required").optional(),
-  qty: z
-    .number()
-    .int()
-    .nonnegative("Quantity must be a positive number")
+    .default(1)
     .optional(),
+  color: z.string().optional().nullable(),
+  size: z.array(z.nativeEnum(Size)),
+  stock: z.number().int().nonnegative(),
+  name: z.string().optional(),
+  slug: z.string().optional(),
   image: z.string().optional(),
-  price: currency.optional(),
+  price: z
+    .number()
+    .positive("Price must be a positive number")
+    .optional(),
 });
 
 export const cartSchema = z.object({
