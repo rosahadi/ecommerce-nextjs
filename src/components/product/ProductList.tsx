@@ -1,4 +1,4 @@
-import { Product } from "@/types";
+import { Product } from "@prisma/client";
 import ProductCard from "./ProductCard";
 
 const ProductList = ({

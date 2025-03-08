@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Product } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -10,10 +9,9 @@ import {
 import ProductPrice from "./ProductPrice";
 import Rating from "./Rating";
 import AddToCart from "./AddToCart";
+import { Product } from "@prisma/client";
 
 const ProductCard = ({ product }: { product: Product }) => {
-  console.log(product);
-
   return (
     <Card className="group overflow-hidden border-0 shadow-sm transition-all hover:shadow-md">
       <div className="relative aspect-square overflow-hidden">
@@ -92,7 +90,11 @@ const ProductCard = ({ product }: { product: Product }) => {
         {/* Add to cart (only if in stock) */}
         {product.stock > 0 && (
           <AddToCart
-            item={{ productId: product.id, qty: 1 }}
+            item={{
+              productId: product.id,
+              stock: product.stock,
+              size: product.size,
+            }}
           />
         )}
       </CardFooter>

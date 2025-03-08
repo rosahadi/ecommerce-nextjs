@@ -1,15 +1,14 @@
 import ProductList from "@/components/product/ProductList";
-import sampleData from "@/db/sample-data";
-import { Product } from "@/types";
+import { getLatestProducts } from "@/lib/actions/product";
 
-const Homepage = () => {
-  const products = sampleData.products as Product[];
+const Homepage = async () => {
+  const latestProducts = await getLatestProducts();
 
   return (
     <ProductList
-      products={products}
+      products={latestProducts}
       title="Newest Arrivals"
-      limit={3}
+      limit={4}
     />
   );
 };
