@@ -12,8 +12,6 @@ const ProductList = ({
   limit?: number;
   emptyMessage?: string;
 }) => {
-  console.log(products);
-
   const displayedProducts = limit
     ? products.slice(0, limit)
     : products;

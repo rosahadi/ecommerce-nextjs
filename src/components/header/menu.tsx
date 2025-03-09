@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -7,10 +9,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { MenuIcon, ShoppingCart } from "lucide-react";
-import UserButton from "./user-button";
 import ModeToggle from "./mode-toggle";
 
-const Menu = () => {
+const Menu = ({
+  userButton,
+}: {
+  userButton: React.ReactNode;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const categories = [
     { value: "all", label: "All" },
@@ -33,7 +38,8 @@ const Menu = () => {
         <h2 className="text-lg font-semibold">Menu</h2>
         <div className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-2">
-            <UserButton />
+            {userButton}
+
             <Button
               asChild
               variant="secondary"

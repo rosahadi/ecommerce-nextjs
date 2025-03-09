@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -14,7 +12,7 @@ import { ChevronDown, ShoppingCart } from "lucide-react";
 import UserButton from "./user-button";
 import Search from "./search";
 import ModeToggle from "./mode-toggle";
-import Menu from "./menu";
+import MenuWrapper from "./MenuWrapper";
 
 const Header = () => {
   const categories = [
@@ -101,7 +99,7 @@ const Header = () => {
 
           {/* Mobile Menu */}
           <div className="flex md:hidden">
-            <Menu />
+            <MenuWrapper />
           </div>
         </div>
 

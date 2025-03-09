@@ -7,16 +7,21 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User } from "lucide-react";
+import { User, UserIcon } from "lucide-react";
+import { auth } from "@/auth";
 
-const UserButton = () => {
-  const session = {
-    user: {
-      name: "John Doe",
-      email: "john@example.com",
-      role: "admin",
-    },
-  };
+const UserButton = async () => {
+  const session = await auth();
+
+  if (!session) {
+    return (
+      <Button asChild>
+        <Link href="/sign-in">
+          <UserIcon /> Sign In
+        </Link>
+      </Button>
+    );
+  }
 
   const firstInitial =
     session.user?.name?.charAt(0).toUpperCase() ?? "U";
