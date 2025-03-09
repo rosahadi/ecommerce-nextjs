@@ -7,7 +7,7 @@ import {
   paymentMethodSchema,
   updateUserSchema,
 } from "../schema";
-import { auth, signIn, signOut } from "@/app/auth";
+import { auth, signIn, signOut } from "@/auth";
 import { hashPassword } from "../encrypt";
 import { prisma } from "@/db/prisma";
 import { formatError } from "../utils";

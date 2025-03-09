@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User, UserIcon } from "lucide-react";
 import { auth } from "@/auth";
+import { signOutUser } from "@/lib/actions/user";
 
 const UserButton = async () => {
   const session = await auth();
@@ -80,12 +81,15 @@ const UserButton = async () => {
             )}
 
             <DropdownMenuItem>
-              <Button
-                className="w-full py-4 px-2 h-4 justify-start"
-                variant="ghost"
-              >
-                Sign Out
-              </Button>
+              <form action={signOutUser}>
+                <Button
+                  type="submit"
+                  className="w-full py-4 px-2 h-4 justify-start"
+                  variant="ghost"
+                >
+                  Sign Out
+                </Button>
+              </form>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
