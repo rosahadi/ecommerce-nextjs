@@ -76,3 +76,13 @@ export function formatCurrency(
     return "NaN";
   }
 }
+
+export const calculateDiscountPrice = (
+  price: number,
+  discountPercent?: number | null
+): number => {
+  if (!discountPercent) return price;
+
+  const discount = (discountPercent / 100) * price;
+  return Number((price - discount).toFixed(2));
+};

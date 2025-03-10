@@ -1,39 +1,41 @@
-import { cn } from "@/lib/utils";
+import {
+  calculateDiscountPrice,
+  cn,
+  formatCurrency,
+} from "@/lib/utils";
 
 const ProductPrice = ({
   value,
-  salePrice,
+  discountPercent,
   className,
 }: {
   value: number;
-  salePrice?: number;
+  discountPercent?: number;
   className?: string;
 }) => {
-  // Format currency
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(price);
-  };
+  const discountedPrice =
+    discountPercent && discountPercent > 0
+      ? value - (value * discountPercent) / 100
+      : 0;
 
   return (
     <div
       className={cn("flex items-center gap-2", className)}
     >
-      {salePrice ? (
+      {discountPercent ? (
         <>
           <span className="font-medium text-red-600">
-            {formatPrice(salePrice)}
+            {formatCurrency(
+              calculateDiscountPrice(discountedPrice)
+            )}
           </span>
           <span className="text-sm text-muted-foreground line-through">
-            {formatPrice(value)}
+            {formatCurrency(value)}
           </span>
         </>
       ) : (
         <span className="font-medium">
-          {formatPrice(value)}
+          {formatCurrency(value)}
         </span>
       )}
     </div>

@@ -89,12 +89,10 @@ const ProductDetailsPage = async (props: {
             <div className="flex items-center gap-3">
               <ProductPrice
                 value={Number(product.price)}
-                salePrice={
-                  product.salePrice
-                    ? Number(product.salePrice)
-                    : undefined
-                }
                 className="text-xl"
+                discountPercent={
+                  product.discountPercent || undefined
+                }
               />
             </div>
 
@@ -184,10 +182,8 @@ const ProductDetailsPage = async (props: {
                 </span>
                 <ProductPrice
                   value={Number(product.price)}
-                  salePrice={
-                    product.salePrice
-                      ? Number(product.salePrice)
-                      : undefined
+                  discountPercent={
+                    product.discountPercent || undefined
                   }
                 />
               </div>

@@ -80,10 +80,8 @@ const ProductCard = ({ product }: { product: Product }) => {
         {/* Price */}
         <ProductPrice
           value={Number(product.price)}
-          salePrice={
-            product.salePrice
-              ? Number(product.salePrice)
-              : undefined
+          discountPercent={
+            product.discountPercent || undefined
           }
         />
 

@@ -47,11 +47,6 @@ export const productSchema = z.object({
     .nativeEnum(ProductStatus)
     .default(ProductStatus.IN_STOCK),
   price: z.number().positive("Price must be positive"),
-  salePrice: z
-    .number()
-    .positive("Sale price must be positive")
-    .optional()
-    .nullable(),
   discountPercent: z
     .number()
     .int()
@@ -81,7 +76,6 @@ export const insertProductSchema = productSchema
   })
   .extend({
     price: currency,
-    salePrice: currency.optional(),
     rating: z
       .string()
       .default("0")
@@ -197,8 +191,7 @@ export const cartItemSchema = z.object({
   image: z.string().optional(),
   price: z
     .number()
-    .positive("Price must be a positive number")
-    .optional(),
+    .positive("Price must be a positive number"),
 });
 
 export const cartSchema = z.object({
