@@ -298,6 +298,11 @@ export const insertOrderSchema = z.object({
   shippingAddress: shippingAddressSchema,
 });
 
+// Schema for payment method
+export const paymentMethodSchema = z.object({
+  type: z.nativeEnum(PaymentMethod),
+});
+
 // Payment result schema
 export const paymentResultSchema = z.object({
   id: z.string(),
