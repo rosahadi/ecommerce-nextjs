@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/card";
 import ProductPrice from "./ProductPrice";
 import Rating from "./Rating";
+import { Product, Size } from "@prisma/client";
 import AddToCart from "./AddToCart";
-import { Product } from "@prisma/client";
 
 const ProductCard = ({ product }: { product: Product }) => {
   return (
@@ -93,7 +93,12 @@ const ProductCard = ({ product }: { product: Product }) => {
             item={{
               productId: product.id,
               stock: product.stock,
-              size: product.size,
+              size: product.size as Size[],
+              price: Number(product.price),
+              color: product.color,
+              name: product.name,
+              slug: product.slug,
+              image: product.images[0] || "",
             }}
           />
         )}

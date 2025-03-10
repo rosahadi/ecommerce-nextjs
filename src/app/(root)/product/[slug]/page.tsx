@@ -8,6 +8,7 @@ import ProductImages from "@/components/product/ProductImages";
 import Rating from "@/components/product/Rating";
 import AddToCart from "@/components/product/AddToCart";
 import { Truck, RefreshCw } from "lucide-react";
+import { Size } from "@prisma/client";
 
 const ProductDetailsPage = async (props: {
   params: Promise<{ slug: string }>;
@@ -201,15 +202,15 @@ const ProductDetailsPage = async (props: {
                     product.stock > 10
                       ? "text-green-600"
                       : product.stock > 0
-                      ? "text-amber-600"
-                      : "text-red-600"
+                        ? "text-amber-600"
+                        : "text-red-600"
                   }
                 >
                   {product.stock > 10
                     ? "In Stock"
                     : product.stock > 0
-                    ? `Only ${product.stock} left`
-                    : "Out of Stock"}
+                      ? `Only ${product.stock} left`
+                      : "Out of Stock"}
                 </span>
               </div>
 
@@ -220,7 +221,12 @@ const ProductDetailsPage = async (props: {
                     item={{
                       productId: product.id,
                       stock: product.stock,
-                      size: product.size,
+                      size: product.size as Size[],
+                      price: Number(product.price),
+                      color: product.color,
+                      name: product.name,
+                      slug: product.slug,
+                      image: product.images[0] || "",
                     }}
                   />
                 </div>
