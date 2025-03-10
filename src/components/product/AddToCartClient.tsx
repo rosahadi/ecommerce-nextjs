@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { CartItem } from "@/types";
 import { Size } from "@prisma/client";
 import { z } from "zod";
+import { cartUpdated } from "../header/CartButton";
 
 const schema = z.object({
   size: z.string().min(1, "Please select a size"),
@@ -90,6 +91,8 @@ const AddToCartClient = ({
             result.message ||
             "Item has been added successfully.",
         });
+
+        cartUpdated();
         setIsDialogOpen(false);
         reset();
       } else {

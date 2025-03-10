@@ -8,8 +8,9 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { MenuIcon, ShoppingCart } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 import ModeToggle from "./mode-toggle";
+import CartButton from "./CartButton";
 
 const Menu = ({
   userButton,
@@ -17,6 +18,7 @@ const Menu = ({
   userButton: React.ReactNode;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+
   const categories = [
     { value: "all", label: "All" },
     { value: "Tops", label: "Tops", count: 3 },
@@ -39,17 +41,7 @@ const Menu = ({
         <div className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-2">
             {userButton}
-
-            <Button
-              asChild
-              variant="secondary"
-              className="w-full justify-start gap-2"
-            >
-              <Link href="/cart">
-                <ShoppingCart className="h-4 w-4" />
-                <span>Cart (0)</span>
-              </Link>
-            </Button>
+            <CartButton />
           </div>
           <div className="py-2 border-t">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">

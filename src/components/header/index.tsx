@@ -8,11 +8,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, ShoppingCart } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import UserButton from "./user-button";
 import Search from "./search";
 import ModeToggle from "./mode-toggle";
 import MenuWrapper from "./MenuWrapper";
+import CartButton from "./CartButton";
 
 const Header = () => {
   const categories = [
@@ -84,17 +85,7 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-2">
             <ModeToggle />
             <UserButton />
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="gap-2 bg-primary/5 hover:bg-primary/10"
-            >
-              <Link href="/cart">
-                <ShoppingCart className="h-4 w-4" />
-                <span>Cart (0)</span>
-              </Link>
-            </Button>
+            <CartButton />
           </div>
 
           {/* Mobile Menu */}

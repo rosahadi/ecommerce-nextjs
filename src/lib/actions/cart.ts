@@ -382,7 +382,50 @@ export async function removeItemFromCart(
   }
 }
 
-// New function to merge guest cart with user cart upon login
+export async function getCartItemCount() {
+  try {
+    // Check for cart cookie
+    const sessionCartId = (await cookies()).get(
+      "sessionCartId"
+    )?.value;
+    if (!sessionCartId) return 0;
+
+    // Get session and user ID
+    const session = await auth();
+    const userId = session?.user?.id
+      ? (session.user.id as string)
+      : undefined;
+
+    // Get cart with minimal data
+    const cart = await prisma.cart.findFirst({
+      where: userId
+        ? { userId: userId }
+        : { sessionCartId: sessionCartId },
+      include: {
+        items: {
+          select: {
+            quantity: true,
+          },
+        },
+      },
+    });
+
+    if (!cart) return 0;
+
+    // Calculate total quantity
+    const totalQuantity = cart.items.reduce(
+      (acc, item) => acc + item.quantity,
+      0
+    );
+
+    return totalQuantity;
+  } catch (error) {
+    console.error("Error getting cart count:", error);
+    return 0;
+  }
+}
+
+//Function to merge guest cart with user cart upon login
 export async function mergeGuestCartWithUserCart(
   userId: string,
   sessionCartId: string
