@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
-import { getCartItemCount } from "@/lib/actions/cart"; // Import the new action
+import { getCartItemCount } from "@/lib/actions/cart";
 
 // Custom event for cart updates
 export const cartUpdated = () => {
