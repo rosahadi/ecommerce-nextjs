@@ -14,6 +14,7 @@ import {
   reviewSchema,
   insertReviewSchema,
   userSchema,
+  cartItemPrismaSchema,
 } from "@/lib/schema";
 
 // Product type definitions
@@ -26,6 +27,9 @@ export type InsertProduct = z.infer<
 export type Cart = z.infer<typeof cartSchema>;
 export type InsertCart = z.infer<typeof insertCartSchema>;
 export type CartItem = z.infer<typeof cartItemSchema>;
+export type CartItemPrisma = z.infer<
+  typeof cartItemPrismaSchema
+>;
 
 // Address type definitions
 export type ShippingAddress = z.infer<

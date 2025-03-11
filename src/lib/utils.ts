@@ -1,3 +1,5 @@
+import { CartItem } from "@/types";
+import { Size } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -85,4 +87,40 @@ export const calculateDiscountPrice = (
 
   const discount = (discountPercent / 100) * price;
   return Number((price - discount).toFixed(2));
+};
+
+export const calcPriceWithDiscounts = (
+  items: CartItem[]
+) => {
+  const itemsPrice = round2(
+    items.reduce((acc, item) => {
+      const priceToUse =
+        item.discountedPrice !== undefined
+          ? item.discountedPrice
+          : item.price || 0;
+      return acc + priceToUse * (item.quantity || 1);
+    }, 0)
+  );
+
+  const shippingPrice = round2(itemsPrice > 100 ? 0 : 10);
+  const taxPrice = round2(0.15 * itemsPrice);
+  const totalPrice = round2(
+    itemsPrice + taxPrice + shippingPrice
+  );
+
+  return {
+    itemsPrice,
+    shippingPrice,
+    taxPrice,
+    totalPrice,
+  };
+};
+
+export const normalizeSize = (
+  size: Size | Size[] | string | null | undefined
+): Size | undefined => {
+  if (Array.isArray(size) && size.length > 0)
+    return size[0] as Size;
+  if (size && typeof size === "string") return size as Size;
+  return size as Size | undefined;
 };

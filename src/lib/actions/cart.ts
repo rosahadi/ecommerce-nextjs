@@ -3,212 +3,123 @@
 import { cookies } from "next/headers";
 import { CartItem } from "@/types";
 import {
+  calculateDiscountPrice,
   convertToPlainObject,
   formatError,
-  round2,
+  calcPriceWithDiscounts,
 } from "../utils";
 import { auth } from "@/auth";
 import { prisma } from "@/db/prisma";
-import { cartItemSchema } from "../schema";
-import { revalidatePath } from "next/cache";
-import { Size } from "@prisma/client";
+import { addCartItemSchema } from "../schema";
+import {
+  Size,
+  PrismaClient,
+  CartItem as PrismaCartItem,
+  Product,
+  Cart,
+} from "@prisma/client";
 
-// Calculate cart prices
-const calcPrice = (items: CartItem[]) => {
-  const itemsPrice = round2(
-      items.reduce(
-        (acc, item) =>
-          acc + Number(item.price) * (item.quantity || 1),
-        0
-      )
-    ),
-    shippingPrice = round2(itemsPrice > 100 ? 0 : 10),
-    taxPrice = round2(0.15 * itemsPrice),
-    totalPrice = round2(
-      itemsPrice + taxPrice + shippingPrice
-    );
+/**
+ * Get the current user's cart session information
+ */
+const getCartSession = async () => {
+  const sessionCartId = (await cookies()).get(
+    "sessionCartId"
+  )?.value;
+  if (!sessionCartId) {
+    throw new Error("Cart session not found");
+  }
 
-  return {
-    itemsPrice: itemsPrice.toFixed(2),
-    shippingPrice: shippingPrice.toFixed(2),
-    taxPrice: taxPrice.toFixed(2),
-    totalPrice: totalPrice.toFixed(2),
-  };
+  const session = await auth();
+  const userId = session?.user?.id
+    ? (session.user.id as string)
+    : undefined;
+
+  return { sessionCartId, userId };
 };
 
-const normalizeSize = (
-  size: Size | Size[] | string | null | undefined
-): Size | undefined => {
-  if (Array.isArray(size) && size.length > 0) {
-    // If size is an array, return the first element
-    return size[0] as Size;
-  }
-  if (size && typeof size === "string") {
-    // If size is a string, cast it to the Size enum
-    return size as Size;
-  }
-  return size as Size | undefined;
+// Define a transaction type using PrismaClient
+type PrismaTransaction = Omit<
+  PrismaClient,
+  | "$connect"
+  | "$disconnect"
+  | "$on"
+  | "$transaction"
+  | "$use"
+  | "$extends"
+>;
+
+// Define the cart item with product for price calculations
+type CartItemWithProduct = PrismaCartItem & {
+  product: Product;
 };
 
+/**
+ * Add an item to the user's cart
+ */
 export async function addItemToCart(data: CartItem) {
   try {
-    // Check for cart cookie
-    const sessionCartId = (await cookies()).get(
-      "sessionCartId"
-    )?.value;
-    if (!sessionCartId)
-      throw new Error("Cart session not found");
+    // Get session information
+    const { sessionCartId, userId } =
+      await getCartSession();
 
-    // Get session and user ID
-    const session = await auth();
-    const userId = session?.user?.id
-      ? (session.user.id as string)
-      : undefined;
-
-    // Get cart
+    // Get current cart
     const cart = await getMyCart();
 
-    // Parse and validate item
-    const item = cartItemSchema.parse(data);
+    // Ensure quantity is defined with a fallback to 1
+    const quantity = data.quantity || 1;
+
+    // Parse and validate item data
+    const validatedItem = addCartItemSchema.parse({
+      productId: data.productId,
+      quantity: quantity,
+      color: data.color,
+      size: data.size,
+    });
 
     // Find product in database
     const product = await prisma.product.findFirst({
-      where: { id: item.productId },
+      where: { id: validatedItem.productId },
     });
-    if (!product) throw new Error("Product not found");
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
 
     // Normalize size data
-    const selectedSize = normalizeSize(item.size);
+    const selectedSizes = Array.isArray(validatedItem.size)
+      ? validatedItem.size
+      : validatedItem.size
+        ? [validatedItem.size as Size]
+        : [];
 
     // Use a transaction to ensure data consistency
     return await prisma.$transaction(async (tx) => {
       if (!cart) {
-        // Create new cart object
-        const newCart = {
-          userId: userId,
-          sessionCartId: sessionCartId,
-          ...calcPrice([
-            {
-              ...item,
-              quantity: item.quantity || 1,
-              price: product.price.toNumber(),
-            },
-          ]),
-        };
-
-        // Add to database with properly typed cart item
-        await tx.cart.create({
-          data: {
-            ...newCart,
-            items: {
-              create: [
-                {
-                  productId: item.productId,
-                  quantity: item.quantity || 1,
-                  color: item.color || null,
-                  size: selectedSize,
-                },
-              ],
-            },
+        return await handleNewCart({
+          tx,
+          product,
+          validatedItem: {
+            ...validatedItem,
+            quantity,
           },
+          selectedSizes,
+          sessionCartId,
+          userId,
         });
-
-        // Revalidate product page
-        revalidatePath(`/product/${product.slug}`);
-
-        return {
-          success: true,
-          message: `${product.name} added to cart`,
-        };
       } else {
-        // Get existing cart items
-        const cartItems = await tx.cartItem.findMany({
-          where: { cartId: cart.id },
-        });
-
-        // Check if item is already in cart (matching product, color, size)
-        const existItem = cartItems.find(
-          (x) =>
-            x.productId === item.productId &&
-            x.color === (item.color || null) &&
-            x.size === selectedSize
-        );
-
-        if (existItem) {
-          // Calculate new quantity
-          const newQuantity =
-            existItem.quantity + (item.quantity || 1);
-
-          // Check stock
-          if (product.stock < newQuantity) {
-            throw new Error(
-              `Only ${product.stock} items available in stock`
-            );
-          }
-
-          // Update the quantity of the existing item
-          await tx.cartItem.update({
-            where: { id: existItem.id },
-            data: { quantity: newQuantity },
-          });
-        } else {
-          // If item does not exist in cart
-          // Check stock
-          const requestedQuantity = item.quantity || 1;
-          if (product.stock < requestedQuantity)
-            throw new Error(
-              `Only ${product.stock} items available in stock`
-            );
-
-          // Create a new cart item
-          await tx.cartItem.create({
-            data: {
-              cartId: cart.id,
-              productId: item.productId,
-              quantity: requestedQuantity,
-              color: item.color || null,
-              size: selectedSize,
-            },
-          });
-        }
-
-        // Get updated cart items to recalculate prices
-        const updatedCartItems = await tx.cartItem.findMany(
-          {
-            where: { cartId: cart.id },
-            include: { product: true },
-          }
-        );
-
-        // Transform to CartItem type for price calculation
-        const cartItemsForPricing = updatedCartItems.map(
-          (ci) => ({
-            productId: ci.productId,
-            quantity: ci.quantity,
-            price: ci.product.price.toNumber(),
-            color: ci.color,
-            size: ci.size ? [ci.size] : [],
-            stock: ci.product.stock,
-            name: ci.product.name,
-            slug: ci.product.slug,
-            image: ci.product.images[0] || "",
-          })
-        );
-
-        // Save updated prices to database
-        await tx.cart.update({
-          where: { id: cart.id },
-          data: {
-            ...calcPrice(cartItemsForPricing),
+        return await handleExistingCart({
+          tx,
+          cart: cart as unknown as Cart & {
+            items: CartItemWithProduct[];
           },
+          product,
+          validatedItem: {
+            ...validatedItem,
+            quantity,
+          },
+          selectedSizes,
         });
-
-        revalidatePath(`/product/${product.slug}`);
-
-        return {
-          success: true,
-          message: `${product.name} ${existItem ? "updated in" : "added to"} cart`,
-        };
       }
     });
   } catch (error) {
@@ -219,20 +130,286 @@ export async function addItemToCart(data: CartItem) {
   }
 }
 
+/**
+ * Handle adding an item when creating a new cart
+ */
+async function handleNewCart({
+  tx,
+  product,
+  validatedItem,
+  selectedSizes,
+  sessionCartId,
+  userId,
+}: {
+  tx: PrismaTransaction;
+  product: Product;
+  validatedItem: {
+    productId: string;
+    quantity: number;
+    color?: string | null;
+    size?: Size[];
+  };
+  selectedSizes: Size[];
+  sessionCartId: string;
+  userId: string | undefined;
+}): Promise<{ success: boolean; message: string }> {
+  // Prepare cart item with product data for price calculation
+  const cartItem: CartItem = {
+    productId: validatedItem.productId,
+    quantity: validatedItem.quantity,
+    price: product.price.toNumber(),
+    discountPercent: product.discountPercent,
+    discountedPrice: calculateDiscountPrice(
+      product.price.toNumber(),
+      product.discountPercent
+    ),
+    name: product.name,
+    slug: product.slug,
+    image: product.images[0] || "",
+    stock: product.stock,
+    color: validatedItem.color || null,
+    size: selectedSizes,
+  };
+
+  // Calculate prices with discounts
+  const newCartPrices = calcPriceWithDiscounts([cartItem]);
+
+  // Use the first size from the array or null if array is empty
+  const primarySize =
+    selectedSizes.length > 0 ? selectedSizes[0] : null;
+
+  // Create new cart with validated item
+  await tx.cart.create({
+    data: {
+      userId: userId || null,
+      sessionCartId: sessionCartId,
+      itemsPrice: newCartPrices.itemsPrice,
+      shippingPrice: newCartPrices.shippingPrice,
+      taxPrice: newCartPrices.taxPrice,
+      totalPrice: newCartPrices.totalPrice,
+      items: {
+        create: [
+          {
+            productId: validatedItem.productId,
+            quantity: validatedItem.quantity,
+            color: validatedItem.color || null,
+            size: primarySize,
+          },
+        ],
+      },
+    },
+  });
+
+  return {
+    success: true,
+    message: `${product.name} added to cart`,
+  };
+}
+
+/**
+ * Handle adding an item to an existing cart
+ */
+async function handleExistingCart({
+  tx,
+  cart,
+  product,
+  validatedItem,
+  selectedSizes,
+}: {
+  tx: PrismaTransaction;
+  cart: Cart & {
+    items: CartItemWithProduct[];
+  };
+  product: Product;
+  validatedItem: {
+    productId: string;
+    quantity: number;
+    color?: string | null;
+    size?: Size[];
+  };
+  selectedSizes: Size[];
+}): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  // Get existing cart items
+  const cartItems = await tx.cartItem.findMany({
+    where: { cartId: cart.id },
+  });
+
+  // Get the primary size from the array or null if empty
+  const primarySize =
+    selectedSizes.length > 0 ? selectedSizes[0] : null;
+
+  // Check if item is already in cart (matching product, color, size)
+  const existItem = cartItems.find(
+    (x) =>
+      x.productId === validatedItem.productId &&
+      x.color === (validatedItem.color || null) &&
+      x.size === primarySize
+  );
+
+  if (existItem) {
+    await handleExistingCartItem({
+      tx,
+      existItem,
+      validatedItem,
+      product,
+    });
+  } else {
+    await handleNewCartItem({
+      tx,
+      cart,
+      validatedItem,
+      product,
+      primarySize,
+    });
+  }
+
+  // Update cart prices
+  await updateCartPrices(tx, cart.id);
+
+  return {
+    success: true,
+    message: `${product.name} ${existItem ? "updated in" : "added to"} cart`,
+  };
+}
+
+/**
+ * Handle updating an existing cart item
+ */
+async function handleExistingCartItem({
+  tx,
+  existItem,
+  validatedItem,
+  product,
+}: {
+  tx: PrismaTransaction;
+  existItem: PrismaCartItem;
+  validatedItem: {
+    productId: string;
+    quantity: number;
+    color?: string | null;
+    size?: Size[];
+  };
+  product: Product;
+}): Promise<void> {
+  // Calculate new quantity
+  const newQuantity =
+    existItem.quantity + validatedItem.quantity;
+
+  // Check stock
+  if (product.stock < newQuantity) {
+    throw new Error(
+      `Only ${product.stock} items available in stock`
+    );
+  }
+
+  // Update the quantity of the existing item
+  await tx.cartItem.update({
+    where: { id: existItem.id },
+    data: { quantity: newQuantity },
+  });
+}
+
+/**
+ * Handle adding a new item to an existing cart
+ */
+async function handleNewCartItem({
+  tx,
+  cart,
+  validatedItem,
+  product,
+  primarySize,
+}: {
+  tx: PrismaTransaction;
+  cart: Cart;
+  validatedItem: {
+    productId: string;
+    quantity: number;
+    color?: string | null;
+    size?: Size[];
+  };
+  product: Product;
+  primarySize: Size | null;
+}): Promise<void> {
+  // Check stock
+  const requestedQuantity = validatedItem.quantity;
+  if (product.stock < requestedQuantity) {
+    throw new Error(
+      `Only ${product.stock} items available in stock`
+    );
+  }
+
+  // Create a new cart item
+  await tx.cartItem.create({
+    data: {
+      cartId: cart.id,
+      productId: validatedItem.productId,
+      quantity: requestedQuantity,
+      color: validatedItem.color || null,
+      size: primarySize,
+    },
+  });
+}
+
+/**
+ * Update cart prices based on current items
+ */
+async function updateCartPrices(
+  tx: PrismaTransaction,
+  cartId: string
+): Promise<void> {
+  // Get updated cart items
+  const updatedCartItems = await tx.cartItem.findMany({
+    where: { cartId: cartId },
+    include: { product: true },
+  });
+
+  // Transform to CartItem type for price calculation with discounts
+  const cartItemsForPricing: CartItem[] =
+    updatedCartItems.map((ci) => ({
+      productId: ci.productId,
+      quantity: ci.quantity,
+      price: ci.product.price.toNumber(),
+      discountPercent: ci.product.discountPercent,
+      discountedPrice: calculateDiscountPrice(
+        ci.product.price.toNumber(),
+        ci.product.discountPercent
+      ),
+      color: ci.color,
+      size: ci.size ? [ci.size] : [],
+      stock: ci.product.stock,
+      name: ci.product.name,
+      slug: ci.product.slug,
+      image: ci.product.images[0] || "",
+    }));
+
+  // Calculate updated prices
+  const updatedPrices = calcPriceWithDiscounts(
+    cartItemsForPricing
+  );
+
+  // Save updated prices to database
+  await tx.cart.update({
+    where: { id: cartId },
+    data: {
+      itemsPrice: updatedPrices.itemsPrice,
+      shippingPrice: updatedPrices.shippingPrice,
+      taxPrice: updatedPrices.taxPrice,
+      totalPrice: updatedPrices.totalPrice,
+    },
+  });
+}
+
+/**
+ * Get current user's cart with all items and calculations
+ */
 export async function getMyCart() {
   try {
-    // Check for cart cookie
-    const sessionCartId = (await cookies()).get(
-      "sessionCartId"
-    )?.value;
-    if (!sessionCartId)
-      throw new Error("Cart session not found");
-
-    // Get session and user ID
-    const session = await auth();
-    const userId = session?.user?.id
-      ? (session.user.id as string)
-      : undefined;
+    // Get session information
+    const { sessionCartId, userId } =
+      await getCartSession();
 
     // Get user cart from database
     const cart = await prisma.cart.findFirst({
@@ -256,29 +433,52 @@ export async function getMyCart() {
       0
     );
 
-    // Transform cart items to match CartItem type
-    const transformedItems = cart.items.map((item) => ({
-      id: item.id,
-      cartId: item.cartId,
-      productId: item.productId,
-      quantity: item.quantity,
-      color: item.color,
-      size: item.size ? [item.size] : [],
-      stock: item.product.stock,
-      name: item.product.name,
-      slug: item.product.slug,
-      image: item.product.images[0] || "",
-      price: item.product.price.toNumber(),
-    }));
+    // Transform cart items to match CartItem type and include discount calculations
+    const transformedItems: CartItem[] = cart.items.map(
+      (item) => {
+        const regularPrice = item.product.price.toNumber();
+        const discountPercent =
+          item.product.discountPercent;
+        const discountedPrice = calculateDiscountPrice(
+          regularPrice,
+          discountPercent
+        );
+
+        return {
+          id: item.id,
+          cartId: item.cartId,
+          productId: item.productId,
+          quantity: item.quantity,
+          color: item.color,
+          size: item.size ? [item.size] : [],
+
+          // Product data
+          stock: item.product.stock,
+          name: item.product.name,
+          slug: item.product.slug,
+          image: item.product.images[0] || "",
+          price: regularPrice,
+          discountPercent: discountPercent,
+
+          // Calculated fields
+          discountedPrice: discountedPrice,
+          itemTotal: Number(
+            (discountedPrice * item.quantity).toFixed(2)
+          ),
+        };
+      }
+    );
+
+    // Recalculate cart prices based on discounted prices
+    const recalculatedPrices = calcPriceWithDiscounts(
+      transformedItems
+    );
 
     // Convert decimals and return
     return convertToPlainObject({
       ...cart,
       items: transformedItems,
-      itemsPrice: cart.itemsPrice.toString(),
-      totalPrice: cart.totalPrice.toString(),
-      shippingPrice: cart.shippingPrice.toString(),
-      taxPrice: cart.taxPrice.toString(),
+      ...recalculatedPrices,
       totalQuantity,
     });
   } catch (error) {
@@ -287,31 +487,33 @@ export async function getMyCart() {
   }
 }
 
+/**
+ * Remove an item from the cart (completely or reduce quantity)
+ */
 export async function removeItemFromCart(
   productId: string,
+  removeAll: boolean = false,
   color?: string | null,
-  size?: string | null
+  size?: Size[]
 ) {
   try {
-    // Check for cart cookie
-    const sessionCartId = (await cookies()).get(
-      "sessionCartId"
-    )?.value;
-    if (!sessionCartId)
-      throw new Error("Cart session not found");
-
     // Get Product
     const product = await prisma.product.findFirst({
       where: { id: productId },
     });
-    if (!product) throw new Error("Product not found");
+    if (!product) {
+      throw new Error("Product not found");
+    }
 
     // Get user cart
     const cart = await getMyCart();
-    if (!cart) throw new Error("Cart not found");
+    if (!cart) {
+      throw new Error("Cart not found");
+    }
 
-    // Normalize size
-    const normalizedSize = normalizeSize(size);
+    // Get the primary size from the array or null if empty
+    const primarySize =
+      size && size.length > 0 ? size[0] : null;
 
     // Use transaction for data consistency
     return await prisma.$transaction(async (tx) => {
@@ -321,14 +523,15 @@ export async function removeItemFromCart(
           cartId: cart.id,
           productId: productId,
           color: color || null,
-          size: normalizedSize,
+          size: primarySize,
         },
       });
 
-      if (!cartItem)
+      if (!cartItem) {
         throw new Error("Item not found in cart");
+      }
 
-      if (cartItem.quantity > 1) {
+      if (cartItem.quantity > 1 && !removeAll) {
         // Decrease quantity
         await tx.cartItem.update({
           where: { id: cartItem.id },
@@ -341,40 +544,12 @@ export async function removeItemFromCart(
         });
       }
 
-      // Get updated cart items to recalculate prices
-      const updatedCartItems = await tx.cartItem.findMany({
-        where: { cartId: cart.id },
-        include: { product: true },
-      });
-
-      // Transform to CartItem type for price calculation
-      const cartItemsForPricing = updatedCartItems.map(
-        (ci) => ({
-          productId: ci.productId,
-          quantity: ci.quantity,
-          price: ci.product.price.toNumber(),
-          color: ci.color,
-          size: ci.size ? [ci.size] : [],
-          stock: ci.product.stock,
-          name: ci.product.name,
-          slug: ci.product.slug,
-          image: ci.product.images[0] || "",
-        })
-      );
-
-      // Update cart with new prices
-      await tx.cart.update({
-        where: { id: cart.id },
-        data: {
-          ...calcPrice(cartItemsForPricing),
-        },
-      });
-
-      revalidatePath(`/product/${product.slug}`);
+      // Update cart prices
+      await updateCartPrices(tx, cart.id);
 
       return {
         success: true,
-        message: `${product.name} was removed from cart`,
+        message: `${product.name} was ${removeAll ? "removed from" : "updated in"} cart`,
       };
     });
   } catch (error) {
@@ -382,6 +557,9 @@ export async function removeItemFromCart(
   }
 }
 
+/**
+ * Get count of items in the cart (for badge display)
+ */
 export async function getCartItemCount() {
   try {
     // Check for cart cookie
@@ -422,121 +600,5 @@ export async function getCartItemCount() {
   } catch (error) {
     console.error("Error getting cart count:", error);
     return 0;
-  }
-}
-
-//Function to merge guest cart with user cart upon login
-export async function mergeGuestCartWithUserCart(
-  userId: string,
-  sessionCartId: string
-) {
-  try {
-    // Check if both user and session carts exist
-    const userCart = await prisma.cart.findFirst({
-      where: { userId },
-      include: { items: true },
-    });
-
-    const sessionCart = await prisma.cart.findFirst({
-      where: { sessionCartId, userId: null },
-      include: { items: true },
-    });
-
-    // If no session cart or it's empty, nothing to merge
-    if (!sessionCart || sessionCart.items.length === 0) {
-      return {
-        success: true,
-        message: "No items to merge",
-      };
-    }
-
-    // Use transaction for data consistency
-    return await prisma.$transaction(async (tx) => {
-      if (!userCart) {
-        // If user has no cart, simply update the session cart with userId
-        await tx.cart.update({
-          where: { id: sessionCart.id },
-          data: { userId },
-        });
-      } else {
-        // Merge items from session cart to user cart
-        for (const sessionItem of sessionCart.items) {
-          // Check if item already exists in user cart
-          const existingItem = userCart.items.find(
-            (item) =>
-              item.productId === sessionItem.productId &&
-              item.color === sessionItem.color &&
-              item.size === sessionItem.size
-          );
-
-          if (existingItem) {
-            // Update quantity of existing item
-            await tx.cartItem.update({
-              where: { id: existingItem.id },
-              data: {
-                quantity:
-                  existingItem.quantity +
-                  sessionItem.quantity,
-              },
-            });
-          } else {
-            // Add new item to user cart
-            await tx.cartItem.create({
-              data: {
-                cartId: userCart.id,
-                productId: sessionItem.productId,
-                quantity: sessionItem.quantity,
-                color: sessionItem.color,
-                size: sessionItem.size,
-              },
-            });
-          }
-        }
-
-        // Get all product information for updated user cart
-        const userCartItems = await tx.cartItem.findMany({
-          where: { cartId: userCart.id },
-          include: { product: true },
-        });
-
-        // Calculate new prices
-        const cartItemsForPricing = userCartItems.map(
-          (ci) => ({
-            productId: ci.productId,
-            quantity: ci.quantity,
-            price: ci.product.price.toNumber(),
-            color: ci.color,
-            size: ci.size ? [ci.size] : [],
-            stock: ci.product.stock,
-            name: ci.product.name,
-            slug: ci.product.slug,
-            image: ci.product.images[0] || "",
-          })
-        );
-
-        // Update user cart
-        await tx.cart.update({
-          where: { id: userCart.id },
-          data: {
-            ...calcPrice(cartItemsForPricing),
-          },
-        });
-
-        // Delete session cart
-        await tx.cart.delete({
-          where: { id: sessionCart.id },
-        });
-      }
-
-      return {
-        success: true,
-        message: "Cart merged successfully",
-      };
-    });
-  } catch (error) {
-    return {
-      success: false,
-      message: formatError(error),
-    };
   }
 }

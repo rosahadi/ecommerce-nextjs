@@ -173,6 +173,20 @@ export const verificationTokenSchema = z.object({
 });
 
 // Cart and CartItem schemas
+export const cartItemPrismaSchema = z.object({
+  id: z.string().optional(),
+  cartId: z.string().optional(),
+  productId: z.string().min(1, "Product is required"),
+  quantity: z
+    .number()
+    .int()
+    .positive("Quantity must be positive")
+    .default(1)
+    .optional(),
+  color: z.string().optional().nullable(),
+  size: z.array(z.nativeEnum(Size)),
+});
+
 export const cartItemSchema = z.object({
   id: z.string().optional(),
   cartId: z.string().optional(),
@@ -185,13 +199,30 @@ export const cartItemSchema = z.object({
     .optional(),
   color: z.string().optional().nullable(),
   size: z.array(z.nativeEnum(Size)),
-  stock: z.number().int().nonnegative(),
-  name: z.string().optional(),
-  slug: z.string().optional(),
-  image: z.string().optional(),
-  price: z
+
+  // Fields from the Product model
+  name: z.string(),
+  slug: z.string(),
+  image: z.string(),
+  price: z.number(),
+  stock: z.number(),
+  discountPercent: z.number().optional().nullable(),
+
+  // Calculated fields
+  discountedPrice: z.number().optional(),
+  itemTotal: z.number().optional(),
+});
+
+export const addCartItemSchema = z.object({
+  productId: z.string().min(1, "Product is required"),
+  quantity: z
     .number()
-    .positive("Price must be a positive number"),
+    .int()
+    .positive("Quantity must be positive")
+    .default(1)
+    .optional(),
+  color: z.string().optional().nullable(),
+  size: z.array(z.nativeEnum(Size)),
 });
 
 export const cartSchema = z.object({
