@@ -16,7 +16,7 @@ import { z } from "zod";
 import { PAGE_SIZE } from "../constants";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
-import { getMyCart } from "./cart";
+import { cookies } from "next/headers";
 
 // Sign in the user with credentials
 export async function signInWithCredentials(
@@ -29,7 +29,84 @@ export async function signInWithCredentials(
       password: formData.get("password"),
     });
 
+    // Get the session cart ID before signing in
+    const sessionCartId = (await cookies()).get(
+      "sessionCartId"
+    )?.value;
+
+    // Sign in the user
     await signIn("credentials", user);
+
+    // Get the user ID after sign in
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    // Handle cart merging if we have both a session cart and a user
+    if (sessionCartId && userId) {
+      await prisma.$transaction(async (tx) => {
+        // Get session cart with items
+        const sessionCart = await tx.cart.findFirst({
+          where: { sessionCartId: sessionCartId },
+          include: { items: true },
+        });
+
+        if (!sessionCart) return; // No session cart to merge
+
+        // Check if user already has a cart
+        const userCart = await tx.cart.findFirst({
+          where: { userId: userId },
+          include: { items: true },
+        });
+
+        if (userCart) {
+          // User has an existing cart - merge items
+          for (const item of sessionCart.items) {
+            const existingItem = userCart.items.find(
+              (i) =>
+                i.productId === item.productId &&
+                i.color === item.color &&
+                i.size === item.size
+            );
+
+            if (existingItem) {
+              // Update quantity if item already exists
+              await tx.cartItem.update({
+                where: { id: existingItem.id },
+                data: {
+                  quantity:
+                    existingItem.quantity + item.quantity,
+                },
+              });
+            } else {
+              // Add new item to user cart
+              await tx.cartItem.create({
+                data: {
+                  cartId: userCart.id,
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  color: item.color,
+                  size: item.size,
+                },
+              });
+            }
+          }
+
+          // Delete the session cart after merging
+          await tx.cart.delete({
+            where: { id: sessionCart.id },
+          });
+        } else {
+          // User doesn't have a cart - assign session cart to user
+          await tx.cart.update({
+            where: { id: sessionCart.id },
+            data: {
+              userId: userId,
+              sessionCartId: undefined, // Clear the session ID to make it a user cart
+            },
+          });
+        }
+      });
+    }
 
     return {
       success: true,
@@ -53,16 +130,9 @@ export async function signInWithCredentials(
 
 // Sign user out
 export async function signOutUser() {
-  // get current users cart and delete it so it does not persist to next user
-  const currentCart = await getMyCart();
+  // Clear the sessionCartId cookie
+  (await cookies()).delete("sessionCartId");
 
-  if (currentCart?.id) {
-    await prisma.cart.delete({
-      where: { id: currentCart.id },
-    });
-  } else {
-    console.warn("No cart found for deletion.");
-  }
   await signOut();
 }
 

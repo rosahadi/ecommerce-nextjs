@@ -407,23 +407,48 @@ async function updateCartPrices(
  */
 export async function getMyCart() {
   try {
-    // Get session information
-    const { sessionCartId, userId } =
-      await getCartSession();
+    // Get session cookie
+    const sessionCartId = (await cookies()).get(
+      "sessionCartId"
+    )?.value;
 
-    // Get user cart from database
-    const cart = await prisma.cart.findFirst({
-      where: userId
-        ? { userId: userId }
-        : { sessionCartId: sessionCartId },
-      include: {
-        items: {
-          include: {
-            product: true,
+    if (!sessionCartId) return undefined;
+
+    // Get session and user ID
+    const session = await auth();
+    const userId = session?.user?.id
+      ? (session.user.id as string)
+      : undefined;
+
+    // Try to find a cart for this user first (if they're logged in)
+    let cart = undefined;
+
+    if (userId) {
+      cart = await prisma.cart.findFirst({
+        where: { userId: userId },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
           },
         },
-      },
-    });
+      });
+    }
+
+    // If no user cart, try to find a session cart
+    if (!cart && sessionCartId) {
+      cart = await prisma.cart.findFirst({
+        where: { sessionCartId: sessionCartId },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!cart) return undefined;
 
@@ -574,19 +599,35 @@ export async function getCartItemCount() {
       ? (session.user.id as string)
       : undefined;
 
-    // Get cart with minimal data
-    const cart = await prisma.cart.findFirst({
-      where: userId
-        ? { userId: userId }
-        : { sessionCartId: sessionCartId },
-      include: {
-        items: {
-          select: {
-            quantity: true,
+    // Try to find a cart with user ID first (if logged in)
+    let cart = undefined;
+
+    if (userId) {
+      cart = await prisma.cart.findFirst({
+        where: { userId: userId },
+        include: {
+          items: {
+            select: {
+              quantity: true,
+            },
           },
         },
-      },
-    });
+      });
+    }
+
+    // If no user cart found, try to find a session cart
+    if (!cart && sessionCartId) {
+      cart = await prisma.cart.findFirst({
+        where: { sessionCartId: sessionCartId },
+        include: {
+          items: {
+            select: {
+              quantity: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!cart) return 0;
 
