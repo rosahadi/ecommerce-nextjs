@@ -1,3 +1,5 @@
+import { PaymentMethod } from "@prisma/client";
+
 export const APP_NAME = "Urban Edge";
 export const APP_DESCRIPTION =
   "A modern ecommerce store built with Next.js";
@@ -6,6 +8,9 @@ export const SERVER_URL =
   "http://localhost:3000";
 export const LATEST_PRODUCTS_LIMIT =
   Number(process.env.LATEST_PRODUCTS_LIMIT) || 5;
+
+export const PAYMENT_METHODS = Object.values(PaymentMethod);
+export const DEFAULT_PAYMENT_METHOD = PaymentMethod.PAYPAL;
 
 export const signInDefaultValues = {
   email: "admin@example.com",

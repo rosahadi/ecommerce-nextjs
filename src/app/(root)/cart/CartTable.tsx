@@ -414,30 +414,6 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                       {formatCurrency(cart.itemsPrice)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span>
-                      {formatCurrency(
-                        cart.shippingPrice || 0
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>
-                      {formatCurrency(cart.taxPrice || 0)}
-                    </span>
-                  </div>
-                  <div className="border-t pt-2 mt-2">
-                    <div className="flex justify-between font-bold">
-                      <span>Total</span>
-                      <span>
-                        {formatCurrency(
-                          cart.totalPrice || cart.itemsPrice
-                        )}
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="pt-2">
