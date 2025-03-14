@@ -277,7 +277,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                     </TableHead>
                     <TableHead>Variations</TableHead>
                     <TableHead className="text-center">
-                      Qty
+                      Quantity
                     </TableHead>
                     <TableHead className="text-right">
                       Price
