@@ -275,7 +275,7 @@ export const shippingAddressSchema = z.object({
 export const orderItemSchema = z.object({
   orderId: uuid,
   productId: uuid,
-  qty: z.number().int().positive(),
+  quantity: z.number().int().positive(),
   price: z.number().positive(),
   name: z.string(),
   slug: z.string(),
@@ -288,7 +288,7 @@ export const insertOrderItemSchema = z.object({
   image: z.string(),
   name: z.string(),
   price: currency,
-  qty: z.number(),
+  quantity: z.number(),
 });
 
 export const orderSchema = z.object({

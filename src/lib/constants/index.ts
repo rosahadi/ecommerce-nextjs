@@ -10,7 +10,7 @@ export const LATEST_PRODUCTS_LIMIT =
   Number(process.env.LATEST_PRODUCTS_LIMIT) || 5;
 
 export const PAYMENT_METHODS = Object.values(PaymentMethod);
-export const DEFAULT_PAYMENT_METHOD = PaymentMethod.PAYPAL;
+export const DEFAULT_PAYMENT_METHOD = PaymentMethod.STRIPE;
 
 export const signInDefaultValues = {
   email: "admin@example.com",

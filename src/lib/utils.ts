@@ -2,6 +2,7 @@ import { CartItem } from "@/types";
 import { Size } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { format } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -123,4 +124,31 @@ export const normalizeSize = (
     return size[0] as Size;
   if (size && typeof size === "string") return size as Size;
   return size as Size | undefined;
+};
+
+// Shorten UUID
+export function formatId(id: string) {
+  return `..${id.substring(id.length - 6)}`;
+}
+
+// Format date and times
+export const formatDateTime = (dateString: Date) => {
+  const formattedDateTime: string = format(
+    dateString,
+    "MMM d, yyyy h:mm a"
+  );
+  const formattedDate: string = format(
+    dateString,
+    "EEE, MMM d, yyyy"
+  );
+  const formattedTime: string = format(
+    dateString,
+    "h:mm a"
+  );
+
+  return {
+    dateTime: formattedDateTime,
+    dateOnly: formattedDate,
+    timeOnly: formattedTime,
+  };
 };
