@@ -280,6 +280,8 @@ export const orderItemSchema = z.object({
   name: z.string(),
   slug: z.string(),
   image: z.string(),
+  color: z.string().optional().nullable(),
+  size: z.array(z.nativeEnum(Size)),
 });
 
 export const insertOrderItemSchema = z.object({
@@ -289,6 +291,8 @@ export const insertOrderItemSchema = z.object({
   name: z.string(),
   price: currency,
   quantity: z.number(),
+  color: z.string().optional().nullable(),
+  size: z.array(z.nativeEnum(Size)),
 });
 
 export const orderSchema = z.object({
@@ -297,10 +301,10 @@ export const orderSchema = z.object({
   shippingAddress: shippingAddressSchema,
   paymentMethod: z.nativeEnum(PaymentMethod),
   paymentResult: z.record(z.any()).optional().nullable(),
-  itemsPrice: z.number().positive(),
+  itemsPrice: currency,
   shippingPrice: z.number().nonnegative(),
   taxPrice: z.number().nonnegative(),
-  totalPrice: z.number().positive(),
+  totalPrice: currency,
   isPaid: z.boolean().default(false),
   paidAt: z.date().optional().nullable(),
   isDelivered: z.boolean().default(false),
@@ -320,6 +324,7 @@ export const insertOrderSchema = z.object({
   totalPrice: currency,
   paymentMethod: z.nativeEnum(PaymentMethod),
   shippingAddress: shippingAddressSchema,
+  orderitems: z.array(insertOrderItemSchema),
 });
 
 // Schema for payment method

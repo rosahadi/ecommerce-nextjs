@@ -15,6 +15,7 @@ import {
   ShippingAddress,
   Order,
   InsertOrder,
+  InsertOrderItem,
 } from "@/types";
 import { revalidatePath } from "next/cache";
 import { PAGE_SIZE } from "../constants";
@@ -62,6 +63,20 @@ export async function createOrder() {
       };
     }
 
+    // Create order items array from cart items
+    const orderItems: InsertOrderItem[] = cart.items.map(
+      (item: CartItem) => ({
+        productId: item.productId,
+        quantity: item.quantity || 1,
+        price: item.price.toString(),
+        name: item.name,
+        slug: item.slug,
+        image: item.image,
+        color: item.color || null,
+        size: item.size || [],
+      })
+    );
+
     // Create order object with proper validation
     const orderData: InsertOrder = {
       userId: user.id,
@@ -71,6 +86,7 @@ export async function createOrder() {
       shippingPrice: cart.shippingPrice.toString(),
       taxPrice: cart.taxPrice.toString(),
       totalPrice: cart.totalPrice.toString(),
+      orderitems: orderItems,
     };
 
     // Validate with Zod schema
@@ -104,6 +120,11 @@ export async function createOrder() {
               name: item.name,
               slug: item.slug,
               image: item.image,
+              color: item.color || null,
+              size:
+                item.size && item.size.length > 0
+                  ? item.size[0]
+                  : null,
             },
           });
         }
