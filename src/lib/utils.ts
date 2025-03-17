@@ -118,13 +118,20 @@ export const calcPriceWithDiscounts = (
   };
 };
 
-export const normalizeSize = (
-  size: Size | Size[] | string | null | undefined
-): Size | undefined => {
-  if (Array.isArray(size) && size.length > 0)
-    return size[0] as Size;
-  if (size && typeof size === "string") return size as Size;
-  return size as Size | undefined;
+// Helper function to get the primary size from an array or string
+export const getPrimarySize = (
+  size: Size | Size[] | null | undefined
+): Size => {
+  if (Array.isArray(size) && size.length > 0) {
+    return size[0];
+  }
+
+  if (size && !Array.isArray(size)) {
+    return size;
+  }
+
+  // Default size if none provided
+  return Size.M;
 };
 
 // Shorten UUID
@@ -177,4 +184,11 @@ export function formUrlQuery({
       skipNull: true,
     }
   );
+}
+
+// Format Number
+const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
+
+export function formatNumber(number: number) {
+  return NUMBER_FORMATTER.format(number);
 }

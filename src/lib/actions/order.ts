@@ -3,6 +3,7 @@
 import {
   convertToPlainObject,
   formatError,
+  getPrimarySize,
 } from "../utils";
 import { auth } from "@/auth";
 import { getMyCart } from "./cart";
@@ -63,17 +64,17 @@ export async function createOrder() {
       };
     }
 
-    // Create order items array from cart items
+    // Create order items array from cart items with types matching Prisma schema
     const orderItems: InsertOrderItem[] = cart.items.map(
       (item: CartItem) => ({
         productId: item.productId,
         quantity: item.quantity || 1,
-        price: item.price.toString(),
-        name: item.name,
-        slug: item.slug,
-        image: item.image,
+        price: item.price || 0,
+        name: item.name || "",
+        slug: item.slug || "",
+        image: item.image || "",
         color: item.color || null,
-        size: item.size || [],
+        size: getPrimarySize(item.size),
       })
     );
 
@@ -82,10 +83,10 @@ export async function createOrder() {
       userId: user.id,
       shippingAddress: user.address as ShippingAddress,
       paymentMethod: user.paymentMethod as PaymentMethod,
-      itemsPrice: cart.itemsPrice.toString(),
-      shippingPrice: cart.shippingPrice.toString(),
-      taxPrice: cart.taxPrice.toString(),
-      totalPrice: cart.totalPrice.toString(),
+      itemsPrice: cart.itemsPrice,
+      shippingPrice: cart.shippingPrice,
+      taxPrice: cart.taxPrice,
+      totalPrice: cart.totalPrice,
       orderitems: orderItems,
     };
 
@@ -109,22 +110,19 @@ export async function createOrder() {
           },
         });
 
-        // Create order items from the cart items
-        for (const item of cart.items as CartItem[]) {
+        // Create order items from the order items data
+        for (const item of order.orderitems) {
           await tx.orderItem.create({
             data: {
               orderId: insertedOrder.id,
               productId: item.productId,
-              quantity: item.quantity || 1,
-              price: item.price,
+              quantity: item.quantity,
+              price: Number(item.price),
               name: item.name,
               slug: item.slug,
               image: item.image,
-              color: item.color || null,
-              size:
-                item.size && item.size.length > 0
-                  ? item.size[0]
-                  : null,
+              color: item.color,
+              size: getPrimarySize(item.size),
             },
           });
         }

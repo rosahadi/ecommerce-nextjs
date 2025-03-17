@@ -1,16 +1,17 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { CartItem } from "@/types";
+import { auth } from "@/auth";
+import { prisma } from "@/db/prisma";
+import { CartItem, CartItemPrisma } from "@/types";
+import { addCartItemSchema } from "../schema";
 import {
   calculateDiscountPrice,
   convertToPlainObject,
   formatError,
   calcPriceWithDiscounts,
+  getPrimarySize,
 } from "../utils";
-import { auth } from "@/auth";
-import { prisma } from "@/db/prisma";
-import { addCartItemSchema } from "../schema";
 import {
   Size,
   PrismaClient,
@@ -57,7 +58,7 @@ type CartItemWithProduct = PrismaCartItem & {
 /**
  * Add an item to the user's cart
  */
-export async function addItemToCart(data: CartItem) {
+export async function addItemToCart(data: CartItemPrisma) {
   try {
     // Get session information
     const { sessionCartId, userId } =
@@ -69,12 +70,16 @@ export async function addItemToCart(data: CartItem) {
     // Ensure quantity is defined with a fallback to 1
     const quantity = data.quantity || 1;
 
+    // Get primary size - required by schema
+    // This handles the conversion from Size[] to Size for database storage
+    const primarySize = getPrimarySize(data.size);
+
     // Parse and validate item data
     const validatedItem = addCartItemSchema.parse({
       productId: data.productId,
       quantity: quantity,
       color: data.color,
-      size: data.size,
+      size: primarySize,
     });
 
     // Find product in database
@@ -86,13 +91,6 @@ export async function addItemToCart(data: CartItem) {
       throw new Error("Product not found");
     }
 
-    // Normalize size data
-    const selectedSizes = Array.isArray(validatedItem.size)
-      ? validatedItem.size
-      : validatedItem.size
-        ? [validatedItem.size as Size]
-        : [];
-
     // Use a transaction to ensure data consistency
     return await prisma.$transaction(async (tx) => {
       if (!cart) {
@@ -102,8 +100,8 @@ export async function addItemToCart(data: CartItem) {
           validatedItem: {
             ...validatedItem,
             quantity,
+            size: primarySize,
           },
-          selectedSizes,
           sessionCartId,
           userId,
         });
@@ -117,8 +115,8 @@ export async function addItemToCart(data: CartItem) {
           validatedItem: {
             ...validatedItem,
             quantity,
+            size: primarySize,
           },
-          selectedSizes,
         });
       }
     });
@@ -137,7 +135,6 @@ async function handleNewCart({
   tx,
   product,
   validatedItem,
-  selectedSizes,
   sessionCartId,
   userId,
 }: {
@@ -147,36 +144,38 @@ async function handleNewCart({
     productId: string;
     quantity: number;
     color?: string | null;
-    size?: Size[];
+    size: Size;
   };
-  selectedSizes: Size[];
   sessionCartId: string;
   userId: string | undefined;
 }): Promise<{ success: boolean; message: string }> {
+  // Calculate the discounted price
+  const discountedPrice =
+    calculateDiscountPrice(
+      product.price.toNumber(),
+      product.discountPercent
+    ) || 0;
+
   // Prepare cart item with product data for price calculation
   const cartItem: CartItem = {
     productId: validatedItem.productId,
     quantity: validatedItem.quantity,
     price: product.price.toNumber(),
-    discountPercent: product.discountPercent,
-    discountedPrice: calculateDiscountPrice(
-      product.price.toNumber(),
-      product.discountPercent
-    ),
+    discountPercent: product.discountPercent || 0,
+    discountedPrice: discountedPrice,
+    itemTotal:
+      (discountedPrice || product.price.toNumber()) *
+      validatedItem.quantity,
     name: product.name,
     slug: product.slug,
-    image: product.images[0] || "",
+    image: product.images[0],
     stock: product.stock,
     color: validatedItem.color || null,
-    size: selectedSizes,
+    size: validatedItem.size,
   };
 
   // Calculate prices with discounts
   const newCartPrices = calcPriceWithDiscounts([cartItem]);
-
-  // Use the first size from the array or null if array is empty
-  const primarySize =
-    selectedSizes.length > 0 ? selectedSizes[0] : null;
 
   // Create new cart with validated item
   await tx.cart.create({
@@ -193,7 +192,7 @@ async function handleNewCart({
             productId: validatedItem.productId,
             quantity: validatedItem.quantity,
             color: validatedItem.color || null,
-            size: primarySize,
+            size: validatedItem.size,
           },
         ],
       },
@@ -214,7 +213,6 @@ async function handleExistingCart({
   cart,
   product,
   validatedItem,
-  selectedSizes,
 }: {
   tx: PrismaTransaction;
   cart: Cart & {
@@ -225,9 +223,8 @@ async function handleExistingCart({
     productId: string;
     quantity: number;
     color?: string | null;
-    size?: Size[];
+    size: Size; // Single size for database
   };
-  selectedSizes: Size[];
 }): Promise<{
   success: boolean;
   message: string;
@@ -237,16 +234,12 @@ async function handleExistingCart({
     where: { cartId: cart.id },
   });
 
-  // Get the primary size from the array or null if empty
-  const primarySize =
-    selectedSizes.length > 0 ? selectedSizes[0] : null;
-
   // Check if item is already in cart (matching product, color, size)
   const existItem = cartItems.find(
     (x) =>
       x.productId === validatedItem.productId &&
       x.color === (validatedItem.color || null) &&
-      x.size === primarySize
+      x.size === validatedItem.size
   );
 
   if (existItem) {
@@ -262,7 +255,6 @@ async function handleExistingCart({
       cart,
       validatedItem,
       product,
-      primarySize,
     });
   }
 
@@ -273,6 +265,45 @@ async function handleExistingCart({
     success: true,
     message: `${product.name} ${existItem ? "updated in" : "added to"} cart`,
   };
+}
+
+/**
+ * Handle adding a new item to an existing cart
+ */
+async function handleNewCartItem({
+  tx,
+  cart,
+  validatedItem,
+  product,
+}: {
+  tx: PrismaTransaction;
+  cart: Cart;
+  validatedItem: {
+    productId: string;
+    quantity: number;
+    color?: string | null;
+    size: Size;
+  };
+  product: Product;
+}): Promise<void> {
+  // Check stock
+  const requestedQuantity = validatedItem.quantity;
+  if (product.stock < requestedQuantity) {
+    throw new Error(
+      `Only ${product.stock} items available in stock`
+    );
+  }
+
+  // Create a new cart item
+  await tx.cartItem.create({
+    data: {
+      cartId: cart.id,
+      productId: validatedItem.productId,
+      quantity: requestedQuantity,
+      color: validatedItem.color || null,
+      size: validatedItem.size,
+    },
+  });
 }
 
 /**
@@ -290,7 +321,7 @@ async function handleExistingCartItem({
     productId: string;
     quantity: number;
     color?: string | null;
-    size?: Size[];
+    size: Size;
   };
   product: Product;
 }): Promise<void> {
@@ -313,47 +344,6 @@ async function handleExistingCartItem({
 }
 
 /**
- * Handle adding a new item to an existing cart
- */
-async function handleNewCartItem({
-  tx,
-  cart,
-  validatedItem,
-  product,
-  primarySize,
-}: {
-  tx: PrismaTransaction;
-  cart: Cart;
-  validatedItem: {
-    productId: string;
-    quantity: number;
-    color?: string | null;
-    size?: Size[];
-  };
-  product: Product;
-  primarySize: Size | null;
-}): Promise<void> {
-  // Check stock
-  const requestedQuantity = validatedItem.quantity;
-  if (product.stock < requestedQuantity) {
-    throw new Error(
-      `Only ${product.stock} items available in stock`
-    );
-  }
-
-  // Create a new cart item
-  await tx.cartItem.create({
-    data: {
-      cartId: cart.id,
-      productId: validatedItem.productId,
-      quantity: requestedQuantity,
-      color: validatedItem.color || null,
-      size: primarySize,
-    },
-  });
-}
-
-/**
  * Update cart prices based on current items
  */
 async function updateCartPrices(
@@ -368,22 +358,29 @@ async function updateCartPrices(
 
   // Transform to CartItem type for price calculation with discounts
   const cartItemsForPricing: CartItem[] =
-    updatedCartItems.map((ci) => ({
-      productId: ci.productId,
-      quantity: ci.quantity,
-      price: ci.product.price.toNumber(),
-      discountPercent: ci.product.discountPercent,
-      discountedPrice: calculateDiscountPrice(
+    updatedCartItems.map((ci) => {
+      const discountedPrice = calculateDiscountPrice(
         ci.product.price.toNumber(),
         ci.product.discountPercent
-      ),
-      color: ci.color,
-      size: ci.size ? [ci.size] : [],
-      stock: ci.product.stock,
-      name: ci.product.name,
-      slug: ci.product.slug,
-      image: ci.product.images[0] || "",
-    }));
+      );
+
+      return {
+        productId: ci.productId,
+        quantity: ci.quantity,
+        price: ci.product.price.toNumber(),
+        discountPercent: ci.product.discountPercent,
+        discountedPrice: discountedPrice,
+        itemTotal:
+          (discountedPrice || ci.product.price.toNumber()) *
+          ci.quantity,
+        color: ci.color,
+        size: ci.size as Size,
+        stock: ci.product.stock,
+        name: ci.product.name,
+        slug: ci.product.slug,
+        image: ci.product.images[0] || "",
+      };
+    });
 
   // Calculate updated prices
   const updatedPrices = calcPriceWithDiscounts(
@@ -475,17 +472,13 @@ export async function getMyCart() {
           productId: item.productId,
           quantity: item.quantity,
           color: item.color,
-          size: item.size ? [item.size] : [],
-
-          // Product data
+          size: (item.size as Size) || null,
           stock: item.product.stock,
           name: item.product.name,
           slug: item.product.slug,
           image: item.product.images[0] || "",
           price: regularPrice,
           discountPercent: discountPercent,
-
-          // Calculated fields
           discountedPrice: discountedPrice,
           itemTotal: Number(
             (discountedPrice * item.quantity).toFixed(2)
@@ -493,7 +486,6 @@ export async function getMyCart() {
         };
       }
     );
-
     // Recalculate cart prices based on discounted prices
     const recalculatedPrices = calcPriceWithDiscounts(
       transformedItems
@@ -519,7 +511,7 @@ export async function removeItemFromCart(
   productId: string,
   removeAll: boolean = false,
   color?: string | null,
-  size?: Size[]
+  size?: Size | Size[]
 ) {
   try {
     // Get Product
@@ -536,9 +528,8 @@ export async function removeItemFromCart(
       throw new Error("Cart not found");
     }
 
-    // Get the primary size from the array or null if empty
-    const primarySize =
-      size && size.length > 0 ? size[0] : null;
+    // Handle size - convert to a single Size value
+    const primarySize = getPrimarySize(size);
 
     // Use transaction for data consistency
     return await prisma.$transaction(async (tx) => {
