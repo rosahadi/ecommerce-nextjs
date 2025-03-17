@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { formatNumberWithDecimal } from "./utils";
 import {
   OrderStatus,
   PaymentMethod,
@@ -8,17 +7,7 @@ import {
   TargetAudience,
 } from "@prisma/client";
 
-// Utility schemas
-const currency = z
-  .string()
-  .refine(
-    (value) =>
-      /^\d+(\.\d{2})?$/.test(
-        formatNumberWithDecimal(Number(value))
-      ),
-    "Price must have exactly two decimal places"
-  );
-
+// Utility schema
 const uuid = z.string().uuid("Invalid UUID format");
 
 // Schema for Product model
@@ -46,7 +35,7 @@ export const productSchema = z.object({
   status: z
     .nativeEnum(ProductStatus)
     .default(ProductStatus.IN_STOCK),
-  price: z.number().positive("Price must be positive"),
+  price: z.number().nonnegative(),
   discountPercent: z
     .number()
     .int()
@@ -57,12 +46,29 @@ export const productSchema = z.object({
   rating: z.number().min(0).max(5).default(0),
   numReviews: z.number().int().nonnegative().default(0),
   color: z.string().optional().nullable(),
-  size: z.array(z.nativeEnum(Size)).optional().nullable(),
+  size: z.array(z.nativeEnum(Size)),
   material: z.string().optional().nullable(),
   isNew: z.boolean().default(false),
   bestSeller: z.boolean().default(false),
   createdAt: z.date(),
   updatedAt: z.date(),
+});
+
+export const addProductToCartClientSchema = z.object({
+  id: uuid,
+  name: z
+    .string()
+    .min(3, "Name must be at least 3 characters"),
+  slug: z
+    .string()
+    .min(3, "Slug must be at least 3 characters"),
+  images: z
+    .array(z.string())
+    .min(1, "Product must have at least one image"),
+  stock: z.number().int().nonnegative(),
+  price: z.number().nonnegative(),
+  color: z.string().optional().nullable(),
+  size: z.array(z.nativeEnum(Size)),
 });
 
 // Schemas for inserting/updating products
@@ -71,16 +77,10 @@ export const insertProductSchema = productSchema
     id: true,
     createdAt: true,
     updatedAt: true,
-    rating: true,
-    numReviews: true,
   })
   .extend({
-    price: currency,
-    rating: z
-      .string()
-      .default("0")
-      .transform((val) => Number(val)),
-    size: z.array(z.nativeEnum(Size)).default([]),
+    price: z.number().nonnegative(),
+    size: z.array(z.nativeEnum(Size)),
   });
 
 export const updateProductSchema =
@@ -93,12 +93,8 @@ export const userSchema = z.object({
   id: uuid,
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
-  emailVerified: z.date().nullable(),
-  image: z
-    .string()
-    .url("Invalid image URL")
-    .optional()
-    .nullable(),
+  emailVerified: z.date().optional().nullable(),
+  image: z.string().optional().nullable(),
   password: z.string().optional().nullable(),
   role: z.string().default("user"),
   address: z.record(z.any()).optional().nullable(),
@@ -172,59 +168,48 @@ export const verificationTokenSchema = z.object({
   expires: z.date(),
 });
 
-// Cart and CartItem schemas
-export const cartItemPrismaSchema = z.object({
-  id: z.string().optional(),
-  cartId: z.string().optional(),
-  productId: z.string().min(1, "Product is required"),
-  quantity: z
-    .number()
-    .int()
-    .positive("Quantity must be positive")
-    .default(1)
-    .optional(),
-  color: z.string().optional().nullable(),
-  size: z.array(z.nativeEnum(Size)),
-});
-
 export const cartItemSchema = z.object({
-  id: z.string().optional(),
-  cartId: z.string().optional(),
-  productId: z.string().min(1, "Product is required"),
-  quantity: z
-    .number()
-    .int()
-    .positive("Quantity must be positive")
-    .default(1)
-    .optional(),
+  id: uuid.optional(),
+  cartId: uuid.optional(),
+  productId: uuid,
+  quantity: z.number().int().positive().default(1),
   color: z.string().optional().nullable(),
-  size: z.array(z.nativeEnum(Size)),
-
-  // Fields from the Product model
+  size: z.nativeEnum(Size),
+  // size: z.array(z.nativeEnum(Size)),
   name: z.string(),
   slug: z.string(),
   image: z.string(),
-  price: z.number(),
-  stock: z.number(),
-  discountPercent: z.number().optional().nullable(),
+  price: z.number().nonnegative(),
+  discountPercent: z
+    .number()
+    .int()
+    .min(0)
+    .max(100)
+    .optional()
+    .nullable(),
+  discountedPrice: z.number().nonnegative().optional(),
+  itemTotal: z.number().nonnegative(),
+  stock: z.number().int().nonnegative(),
+});
 
-  // Calculated fields
-  discountedPrice: z.number().optional(),
-  itemTotal: z.number().optional(),
+// Updated Cart Item Prisma schema for database operations
+export const cartItemPrismaSchema = z.object({
+  id: uuid.optional(),
+  cartId: uuid.optional(),
+  productId: uuid,
+  quantity: z.number().int().positive().default(1),
+  color: z.string().optional().nullable(),
+  size: z.nativeEnum(Size),
 });
 
 export const addCartItemSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  quantity: z
-    .number()
-    .int()
-    .positive("Quantity must be positive")
-    .default(1)
-    .optional(),
+  productId: uuid,
+  quantity: z.number().int().positive().default(1),
   color: z.string().optional().nullable(),
-  size: z.array(z.nativeEnum(Size)),
+  size: z.nativeEnum(Size),
 });
 
+// Cart schema with updated items array type
 export const cartSchema = z.object({
   id: uuid,
   userId: uuid.optional().nullable(),
@@ -235,19 +220,19 @@ export const cartSchema = z.object({
   taxPrice: z.number().nonnegative(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  items: z.array(cartItemSchema).optional(),
+  items: z.array(cartItemSchema),
+  totalQuantity: z.number().int().nonnegative().optional(),
 });
 
+// Schema for inserting a cart
 export const insertCartSchema = z.object({
-  items: z.array(cartItemSchema),
-  itemsPrice: currency,
-  totalPrice: currency,
-  shippingPrice: currency,
-  taxPrice: currency,
-  sessionCartId: z
-    .string()
-    .min(1, "Session cart id is required"),
   userId: uuid.optional().nullable(),
+  sessionCartId: z.string(),
+  itemsPrice: z.number().nonnegative(),
+  totalPrice: z.number().nonnegative(),
+  shippingPrice: z.number().nonnegative(),
+  taxPrice: z.number().nonnegative(),
+  items: z.array(cartItemSchema),
 });
 
 // Shipping and address schemas
@@ -273,6 +258,7 @@ export const shippingAddressSchema = z.object({
 
 // Order and OrderItem schemas
 export const orderItemSchema = z.object({
+  id: uuid,
   orderId: uuid,
   productId: uuid,
   quantity: z.number().int().positive(),
@@ -281,18 +267,7 @@ export const orderItemSchema = z.object({
   slug: z.string(),
   image: z.string(),
   color: z.string().optional().nullable(),
-  size: z.array(z.nativeEnum(Size)),
-});
-
-export const insertOrderItemSchema = z.object({
-  productId: z.string(),
-  slug: z.string(),
-  image: z.string(),
-  name: z.string(),
-  price: currency,
-  quantity: z.number(),
-  color: z.string().optional().nullable(),
-  size: z.array(z.nativeEnum(Size)),
+  size: z.nativeEnum(Size),
 });
 
 export const orderSchema = z.object({
@@ -301,10 +276,10 @@ export const orderSchema = z.object({
   shippingAddress: shippingAddressSchema,
   paymentMethod: z.nativeEnum(PaymentMethod),
   paymentResult: z.record(z.any()).optional().nullable(),
-  itemsPrice: currency,
+  itemsPrice: z.number().nonnegative(),
   shippingPrice: z.number().nonnegative(),
   taxPrice: z.number().nonnegative(),
-  totalPrice: currency,
+  totalPrice: z.number().nonnegative(),
   isPaid: z.boolean().default(false),
   paidAt: z.date().optional().nullable(),
   isDelivered: z.boolean().default(false),
@@ -313,17 +288,30 @@ export const orderSchema = z.object({
     .nativeEnum(OrderStatus)
     .default(OrderStatus.PENDING),
   createdAt: z.date(),
-  orderitems: z.array(orderItemSchema).optional(),
+  orderitems: z.array(orderItemSchema),
 });
 
+// Schema for inserting an OrderItem
+export const insertOrderItemSchema = z.object({
+  productId: uuid,
+  quantity: z.number().int().positive(),
+  price: z.number().positive(),
+  name: z.string(),
+  slug: z.string(),
+  image: z.string(),
+  color: z.string().optional().nullable(),
+  size: z.nativeEnum(Size).optional().nullable(),
+});
+
+// Schema for inserting an Order
 export const insertOrderSchema = z.object({
   userId: uuid,
-  itemsPrice: currency,
-  shippingPrice: currency,
-  taxPrice: currency,
-  totalPrice: currency,
-  paymentMethod: z.nativeEnum(PaymentMethod),
   shippingAddress: shippingAddressSchema,
+  paymentMethod: z.nativeEnum(PaymentMethod),
+  itemsPrice: z.number().nonnegative(),
+  shippingPrice: z.number().nonnegative(),
+  taxPrice: z.number().nonnegative(),
+  totalPrice: z.number().nonnegative(),
   orderitems: z.array(insertOrderItemSchema),
 });
 
@@ -337,7 +325,7 @@ export const paymentResultSchema = z.object({
   id: z.string(),
   status: z.string(),
   email_address: z.string(),
-  pricePaid: z.string(),
+  pricePaid: z.number().nonnegative(),
 });
 
 // Review schema
@@ -365,11 +353,7 @@ export const insertReviewSchema = z.object({
     .min(3, "Description must be at least 3 characters"),
   productId: uuid,
   userId: uuid,
-  rating: z.coerce
-    .number()
-    .int()
-    .min(1, "Rating must be at least 1")
-    .max(5, "Rating must be at most 5"),
+  rating: z.number().int().min(1).max(5),
 });
 
 // User profile update schemas
