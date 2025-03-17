@@ -20,7 +20,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { CartItem } from "@/types";
+import {
+  AddProductToCartClientSchema,
+  CartItem,
+} from "@/types";
 import { Size } from "@prisma/client";
 import { z } from "zod";
 import { cartUpdated } from "../header/CartButton";
@@ -38,7 +41,7 @@ const AddToCartClient = ({
   item,
   addToCartAction,
 }: {
-  item: CartItem;
+  item: AddProductToCartClientSchema;
   addToCartAction: (
     cartItem: CartItem
   ) => Promise<{ success: boolean; message: string }>;
@@ -75,10 +78,18 @@ const AddToCartClient = ({
       return;
     }
 
-    const cartItem = {
-      ...item,
-      size: [data.size as Size],
+    const cartItem: CartItem = {
+      id: item.id,
+      productId: item.id,
+      name: item.name,
+      slug: item.slug,
+      image: item.images[0] || "",
+      stock: item.stock,
+      price: item.price,
+      size: data.size as Size,
       quantity: data.quantity,
+      color: item.color,
+      itemTotal: item.price * data.quantity,
     };
 
     try {
@@ -102,10 +113,11 @@ const AddToCartClient = ({
             "There was an error adding the item to cart.",
         });
       }
-    } catch {
+    } catch (error) {
       toast.error("Error", {
         description: "An unexpected error occurred.",
       });
+      console.error("Error adding to cart:", error);
     } finally {
       setIsSubmitting(false);
     }

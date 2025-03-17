@@ -215,14 +215,14 @@ const ProductDetailsPage = async (props: {
                 <div className="pt-2">
                   <AddToCart
                     item={{
-                      productId: product.id,
+                      id: product.id,
                       stock: product.stock,
                       size: product.size as Size[],
                       price: Number(product.price),
                       color: product.color,
                       name: product.name,
                       slug: product.slug,
-                      image: product.images[0] || "",
+                      images: [product.images[0] || ""],
                     }}
                   />
                 </div>
