@@ -19,11 +19,13 @@ export const productSchema = z.object({
   slug: z
     .string()
     .min(3, "Slug must be at least 3 characters"),
-  category: z.array(
-    z
-      .string()
-      .min(3, "Category must be at least 3 characters")
-  ),
+  category: z
+    .array(
+      z
+        .string()
+        .min(3, "Category must be at least 3 characters")
+    )
+    .min(1, "At least one category is required"),
   targetAudience: z.nativeEnum(TargetAudience),
   images: z
     .array(z.string())
@@ -46,7 +48,9 @@ export const productSchema = z.object({
   rating: z.number().min(0).max(5).default(0),
   numReviews: z.number().int().nonnegative().default(0),
   color: z.string().optional().nullable(),
-  size: z.array(z.nativeEnum(Size)),
+  size: z
+    .array(z.nativeEnum(Size))
+    .min(1, "At least one size is required"),
   material: z.string().optional().nullable(),
   isNew: z.boolean().default(false),
   bestSeller: z.boolean().default(false),
@@ -72,16 +76,11 @@ export const addProductToCartClientSchema = z.object({
 });
 
 // Schemas for inserting/updating products
-export const insertProductSchema = productSchema
-  .omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
-  })
-  .extend({
-    price: z.number().nonnegative(),
-    size: z.array(z.nativeEnum(Size)),
-  });
+export const insertProductSchema = productSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 export const updateProductSchema =
   insertProductSchema.extend({

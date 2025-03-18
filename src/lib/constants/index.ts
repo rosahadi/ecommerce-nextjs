@@ -1,4 +1,9 @@
-import { PaymentMethod } from "@prisma/client";
+import {
+  PaymentMethod,
+  ProductStatus,
+  Size,
+  TargetAudience,
+} from "@prisma/client";
 
 export const APP_NAME = "Urban Edge";
 export const APP_DESCRIPTION =
@@ -39,18 +44,17 @@ export const productDefaultValues = {
   name: "",
   slug: "",
   category: [],
-  targetAudience: "MEN",
+  targetAudience: TargetAudience.MEN,
   images: [],
   description: "",
   stock: 0,
-  status: "IN_STOCK",
-  price: "0",
-  salePrice: null,
+  status: ProductStatus.IN_STOCK,
+  price: 0,
   discountPercent: null,
-  rating: "0",
+  rating: 0,
   numReviews: 0,
   color: null,
-  size: null,
+  size: [] as Size[],
   material: null,
   isNew: false,
   bestSeller: false,

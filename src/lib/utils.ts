@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { CartItem } from "@/types";
-import { Size } from "@prisma/client";
+import { Prisma, Size } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format } from "date-fns";
@@ -19,12 +20,52 @@ export function formatNumberWithDecimal(
     : `${int}.00`;
 }
 
-// Convert prisma object into a regular JS object
+/**
+ * Converts Prisma objects to plain JavaScript objects while preserving number types
+ * @param value Any value to convert
+ * @returns Converted value with proper types
+ */
 export function convertToPlainObject<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  // Handle Decimal values from Prisma
+  if (value instanceof Prisma.Decimal) {
+    return Number(value.toString()) as unknown as T;
+  }
+
+  // Handle Date objects
+  if (value instanceof Date) {
+    return value.toISOString() as unknown as T;
+  }
+
+  // Handle arrays by recursively converting each element
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      convertToPlainObject(item)
+    ) as unknown as T;
+  }
+
+  // Handle objects by recursively converting each property
+  if (typeof value === "object" && value !== null) {
+    const result: Record<string, any> = {};
+    for (const key in value) {
+      if (
+        Object.prototype.hasOwnProperty.call(value, key)
+      ) {
+        result[key] = convertToPlainObject(
+          (value as any)[key]
+        );
+      }
+    }
+    return result as unknown as T;
+  }
+
+  // Return primitive values as is
+  return value;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatError(error: any) {
   if (error.name === "ZodError") {
     const fieldErrors = Object.keys(error.errors).map(
