@@ -5,7 +5,11 @@ import {
   insertProductSchema,
   updateProductSchema,
 } from "@/lib/schema";
-import { InsertProduct, UpdateProduct } from "@/types";
+import {
+  InsertProduct,
+  Product,
+  UpdateProduct,
+} from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -56,7 +60,7 @@ const ProductForm = ({
   productId,
 }: {
   type: "Create" | "Update";
-  product?: UpdateProduct;
+  product?: Product;
   productId?: string;
 }) => {
   const router = useRouter();
