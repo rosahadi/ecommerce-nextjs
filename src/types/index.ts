@@ -72,3 +72,9 @@ export type User = z.infer<typeof userSchema>;
 
 // Utility type for partial updates
 export type PartialWithId<T> = Partial<T> & { id: string };
+
+export interface Category {
+  value: string;
+  label: string;
+  count: number;
+}

@@ -10,16 +10,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import UserButton from "./user-button";
-import Search from "./search";
 import ModeToggle from "./mode-toggle";
 import MenuWrapper from "./MenuWrapper";
 import CartButton from "./CartButton";
+import { getAllCategories } from "@/lib/actions/product";
+import SearchWrapper from "./searchWrapper";
 
-const Header = () => {
+const Header = async () => {
+  const categoriesData = await getAllCategories();
+
   const categories = [
-    { value: "all", label: "All" },
-    { value: "Tops", label: "Tops", count: 3 },
-    { value: "Dresses", label: "Dresses", count: 2 },
+    {
+      value: "all",
+      label: "All",
+      count: categoriesData.length,
+    },
+    ...categoriesData.map((item) => ({
+      value: item.category[0],
+      label: item.category[0],
+      count: item._count,
+    })),
   ];
 
   return (
@@ -63,9 +73,9 @@ const Header = () => {
                         href={`/search?category=${category.value}`}
                       >
                         <span>{category.label}</span>
-                        {category.count && (
+                        {category?.count && (
                           <span className="text-xs text-muted-foreground">
-                            ({category.count})
+                            ({category?.count})
                           </span>
                         )}
                       </Link>
@@ -76,7 +86,7 @@ const Header = () => {
 
               {/* Search */}
               <div className="flex-1">
-                <Search />
+                <SearchWrapper categories={categories} />
               </div>
             </div>
           </div>
@@ -90,13 +100,13 @@ const Header = () => {
 
           {/* Mobile Menu */}
           <div className="flex md:hidden">
-            <MenuWrapper />
+            <MenuWrapper categories={categories} />
           </div>
         </div>
 
         {/* Mobile Search */}
         <div className="md:hidden py-2">
-          <Search />
+          <SearchWrapper categories={categories} />
         </div>
       </div>
     </header>

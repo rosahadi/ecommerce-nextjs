@@ -11,19 +11,16 @@ import {
 import { MenuIcon } from "lucide-react";
 import ModeToggle from "./mode-toggle";
 import CartButton from "./CartButton";
+import { Category } from "@/types";
 
 const Menu = ({
   userButton,
+  categories,
 }: {
   userButton: React.ReactNode;
+  categories: Category[];
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-
-  const categories = [
-    { value: "all", label: "All" },
-    { value: "Tops", label: "Tops", count: 3 },
-    { value: "Dresses", label: "Dresses", count: 2 },
-  ];
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>

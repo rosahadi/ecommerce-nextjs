@@ -4,20 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Filter, SearchIcon } from "lucide-react";
+import { Category } from "@/types";
 
-interface Category {
-  value: string;
-  label: string;
-  count?: number;
-}
-
-const categories: Category[] = [
-  { value: "all", label: "All Categories" },
-  { value: "Tops", label: "Tops", count: 3 },
-  { value: "Dresses", label: "Dresses", count: 2 },
-];
-
-const Search = () => {
+const Search = ({
+  initialCategories,
+}: {
+  initialCategories: Category[];
+}) => {
   const [searchQuery, setSearchQuery] =
     useState<string>("");
   const [selectedCategory, setSelectedCategory] =
@@ -123,7 +116,7 @@ const Search = () => {
               Filter by Category
             </h3>
             <div className="space-y-1">
-              {categories.map((category) => (
+              {initialCategories.map((category) => (
                 <div
                   key={category.value}
                   onClick={() =>
