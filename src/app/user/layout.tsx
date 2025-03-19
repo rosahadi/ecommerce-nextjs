@@ -24,7 +24,7 @@ export default function UserLayout({
 
             <MainNav className="mx-6" />
             <div className="ml-auto items-center flex space-x-4">
-              <MenuWrapper />
+              <MenuWrapper categories={[]} />
             </div>
           </div>
         </div>

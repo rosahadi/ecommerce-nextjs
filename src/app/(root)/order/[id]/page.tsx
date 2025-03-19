@@ -20,8 +20,6 @@ const OrderDetailsPage = async (props: {
   const order = await getOrderById(id);
   if (!order) notFound();
 
-  console.log(order);
-
   const session = await auth();
 
   if (
