@@ -1,5 +1,9 @@
 "use server";
-import { PrismaClient, Prisma } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  TargetAudience,
+} from "@prisma/client";
 import {
   convertToPlainObject,
   formatError,
@@ -63,6 +67,7 @@ export async function getAllProducts({
   category,
   price,
   rating,
+  audience,
   sort,
 }: {
   query: string;
@@ -71,6 +76,7 @@ export async function getAllProducts({
   category?: string;
   price?: string;
   rating?: string;
+  audience?: string;
   sort?: string;
 }) {
   const prisma = new PrismaClient();
@@ -101,12 +107,21 @@ export async function getAllProducts({
         ? { rating: { gte: new Prisma.Decimal(rating) } }
         : {};
 
+    // Add the audience filter
+    const audienceFilter: Prisma.ProductWhereInput =
+      audience && audience !== "all"
+        ? {
+            targetAudience: audience as TargetAudience,
+          }
+        : {};
+
     const data = await prisma.product.findMany({
       where: {
         ...queryFilter,
         ...categoryFilter,
         ...priceFilter,
         ...ratingFilter,
+        ...audienceFilter,
       },
       orderBy:
         sort === "lowest"
@@ -126,6 +141,7 @@ export async function getAllProducts({
         ...categoryFilter,
         ...priceFilter,
         ...ratingFilter,
+        ...audienceFilter,
       },
     });
 

@@ -19,6 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { targetAudiences } from "@/lib/constants";
 
 const PAGE_SIZE = 2;
 
@@ -44,6 +45,7 @@ export async function generateMetadata(props: {
     category?: string;
     price?: string;
     rating?: string;
+    audience?: string;
   }>;
 }) {
   const {
@@ -51,7 +53,13 @@ export async function generateMetadata(props: {
     category = "all",
     price = "all",
     rating = "all",
+    audience = "all",
   } = await props.searchParams;
+
+  const isAudienceSet =
+    audience &&
+    audience !== "all" &&
+    audience.trim() !== "";
 
   const isQuerySet = q && q !== "all" && q.trim() !== "";
   const isCategorySet =
@@ -67,13 +75,15 @@ export async function generateMetadata(props: {
     isQuerySet ||
     isCategorySet ||
     isPriceSet ||
-    isRatingSet
+    isRatingSet ||
+    isAudienceSet
   ) {
     return {
       title: `Search ${isQuerySet ? q : ""} 
-      ${isCategorySet ? `: Category ${category}` : ""}
-      ${isPriceSet ? `: Price ${price}` : ""}
-      ${isRatingSet ? `: Rating ${rating}` : ""}`,
+        ${isCategorySet ? `: Category ${category}` : ""}
+        ${isPriceSet ? `: Price ${price}` : ""}
+        ${isRatingSet ? `: Rating ${rating}` : ""}
+        ${isAudienceSet ? `: For ${audience}` : ""}`,
     };
   } else {
     return {
@@ -88,6 +98,7 @@ const SearchPage = async (props: {
     category?: string;
     price?: string;
     rating?: string;
+    audience?: string;
     sort?: string;
     page?: string;
   }>;
@@ -97,6 +108,7 @@ const SearchPage = async (props: {
     category = "all",
     price = "all",
     rating = "all",
+    audience = "all",
     sort = "newest",
     page = "1",
   } = await props.searchParams;
@@ -107,6 +119,7 @@ const SearchPage = async (props: {
     p,
     s,
     r,
+    a,
     pg,
     q: qParam,
   }: {
@@ -114,6 +127,7 @@ const SearchPage = async (props: {
     p?: string;
     s?: string;
     r?: string;
+    a?: string;
     pg?: string;
     q?: string;
   }) => {
@@ -122,6 +136,7 @@ const SearchPage = async (props: {
       category,
       price,
       rating,
+      audience,
       sort,
       page,
     };
@@ -130,6 +145,7 @@ const SearchPage = async (props: {
     if (p) params.price = p;
     if (s) params.sort = s;
     if (r) params.rating = r;
+    if (a) params.audience = a;
     if (pg) params.page = pg;
     if (qParam) params.q = qParam;
 
@@ -142,6 +158,7 @@ const SearchPage = async (props: {
     price,
     rating,
     sort,
+    audience,
     page: Number(page),
     limit: PAGE_SIZE,
   });
@@ -166,7 +183,8 @@ const SearchPage = async (props: {
     (q !== "all" && q !== "" ? 1 : 0) +
     (category !== "all" && category !== "" ? 1 : 0) +
     (price !== "all" ? 1 : 0) +
-    (rating !== "all" ? 1 : 0);
+    (rating !== "all" ? 1 : 0) +
+    (audience !== "all" ? 1 : 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -243,6 +261,51 @@ const SearchPage = async (props: {
                   </div>
 
                   <Separator />
+
+                  <Separator />
+
+                  <div>
+                    <h3 className="font-medium text-lg mb-3">
+                      Gender
+                    </h3>
+                    <div className="space-y-2">
+                      <Button
+                        variant={
+                          audience === "all"
+                            ? "default"
+                            : "ghost"
+                        }
+                        className="w-full justify-start"
+                        asChild
+                      >
+                        <Link
+                          href={getFilterUrl({ a: "all" })}
+                        >
+                          All
+                        </Link>
+                      </Button>
+                      {targetAudiences.map((a) => (
+                        <Button
+                          key={a.value}
+                          variant={
+                            audience === a.value
+                              ? "default"
+                              : "ghost"
+                          }
+                          className="w-full justify-start"
+                          asChild
+                        >
+                          <Link
+                            href={getFilterUrl({
+                              a: a.value,
+                            })}
+                          >
+                            {a.label}
+                          </Link>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
 
                   <div>
                     <h3 className="font-medium text-lg mb-3">
@@ -402,6 +465,51 @@ const SearchPage = async (props: {
 
                   <Separator />
 
+                  <Separator />
+
+                  <div>
+                    <h3 className="font-medium text-lg mb-3">
+                      Gender
+                    </h3>
+                    <div className="space-y-2">
+                      <Button
+                        variant={
+                          audience === "all"
+                            ? "default"
+                            : "ghost"
+                        }
+                        className="w-full justify-start"
+                        asChild
+                      >
+                        <Link
+                          href={getFilterUrl({ a: "all" })}
+                        >
+                          All
+                        </Link>
+                      </Button>
+                      {targetAudiences.map((a) => (
+                        <Button
+                          key={a.value}
+                          variant={
+                            audience === a.value
+                              ? "default"
+                              : "ghost"
+                          }
+                          className="w-full justify-start"
+                          asChild
+                        >
+                          <Link
+                            href={getFilterUrl({
+                              a: a.value,
+                            })}
+                          >
+                            {a.label}
+                          </Link>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <h3 className="font-medium text-lg mb-3">
                       Price Range
@@ -509,10 +617,10 @@ const SearchPage = async (props: {
 
         {/* Main Content */}
         <div className="flex-1">
-          {/* Active Filters & Sort - Improved for Responsiveness */}
+          {/* Active Filters & Sort */}
           <div className="bg-muted/40 rounded-lg p-4 mb-6">
             <div className="flex flex-col space-y-4">
-              {/* Active Filters Section - Full Width */}
+              {/* Active Filters Section  */}
               {activeFiltersCount > 0 ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-muted-foreground">
@@ -548,6 +656,23 @@ const SearchPage = async (props: {
                           </Link>
                         </Badge>
                       )}
+
+                    {audience !== "all" && (
+                      <Badge
+                        variant="secondary"
+                        className="flex items-center gap-1"
+                      >
+                        {targetAudiences.find(
+                          (a) => a.value === audience
+                        )?.label || audience}
+                        <Link
+                          href={getFilterUrl({ a: "all" })}
+                        >
+                          <X className="h-3 w-3 ml-1" />
+                        </Link>
+                      </Badge>
+                    )}
+
                     {price !== "all" && (
                       <Badge
                         variant="secondary"

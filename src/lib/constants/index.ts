@@ -17,6 +17,13 @@ export const LATEST_PRODUCTS_LIMIT =
 export const PAYMENT_METHODS = Object.values(PaymentMethod);
 export const DEFAULT_PAYMENT_METHOD = PaymentMethod.STRIPE;
 
+export const targetAudiences = Object.entries(
+  TargetAudience
+).map(([key, value]) => ({
+  label: key.charAt(0) + key.slice(1).toLowerCase(),
+  value: value,
+}));
+
 export const signInDefaultValues = {
   email: "admin@example.com",
   password: "123456",
