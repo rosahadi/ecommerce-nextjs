@@ -13,7 +13,7 @@ const ProductImages = ({
 
   return (
     <div className="space-y-4">
-      <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-50">
+      <div className="relative  aspect-[2/2.4] overflow-hidden rounded-lg bg-gray-50">
         <Image
           src={images[current]}
           alt="Product image"
@@ -30,7 +30,7 @@ const ProductImages = ({
             key={index}
             onClick={() => setCurrent(index)}
             className={cn(
-              "relative aspect-square overflow-hidden rounded-md cursor-pointer transition-all",
+              "relative  aspect-[2/2.4] overflow-hidden rounded-md cursor-pointer transition-all",
               current === index
                 ? "ring-2 ring-black"
                 : "ring-1 ring-gray-200 hover:ring-gray-300"

@@ -13,9 +13,12 @@ import AddToCart from "./AddToCart";
 
 const ProductCard = ({ product }: { product: Product }) => {
   return (
-    <Card className="group overflow-hidden border-0 shadow-sm transition-all hover:shadow-md">
-      <div className="relative aspect-square overflow-hidden">
-        <Link href={`/product/${product.slug}`}>
+    <Card className="group overflow-hidden rounded-lg border transition-all hover:shadow-md">
+      <div className="relative aspect-[2/2.4] w-full">
+        <Link
+          href={`/product/${product.slug}`}
+          className="block h-full w-full"
+        >
           <Image
             src={product.images[0]}
             alt={product.name}
@@ -26,19 +29,22 @@ const ProductCard = ({ product }: { product: Product }) => {
           />
 
           {/* Product badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1">
+          <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
             {product.isNew && (
-              <Badge className="bg-primary text-primary-foreground">
+              <Badge
+                variant="default"
+                className="font-medium"
+              >
                 New
               </Badge>
             )}
             {product.bestSeller && (
-              <Badge className="bg-amber-500 text-white">
+              <Badge className="bg-amber-500 text-white font-medium">
                 Best Seller
               </Badge>
             )}
             {product.discountPercent && (
-              <Badge className="bg-red-500 text-white">
+              <Badge className="bg-red-500 text-white font-medium">
                 -{product.discountPercent}%
               </Badge>
             )}
@@ -46,13 +52,14 @@ const ProductCard = ({ product }: { product: Product }) => {
 
           {/* Status badge */}
           {product.status !== "IN_STOCK" && (
-            <div className="absolute top-3 right-3">
+            <div className="absolute top-3 right-3 z-10">
               <Badge
                 variant={
                   product.status === "OUT_OF_STOCK"
                     ? "destructive"
                     : "secondary"
                 }
+                className="font-medium"
               >
                 {product.status.replace("_", " ")}
               </Badge>
@@ -61,10 +68,13 @@ const ProductCard = ({ product }: { product: Product }) => {
         </Link>
       </div>
 
-      <CardContent className="p-4 space-y-2">
+      <CardContent className="p-4 pt-4 space-y-2">
         {/* Product name */}
-        <Link href={`/product/${product.slug}`}>
-          <h3 className="font-medium line-clamp-2 hover:underline">
+        <Link
+          href={`/product/${product.slug}`}
+          className="block"
+        >
+          <h3 className="font-medium line-clamp-2 hover:underline text-foreground">
             {product.name}
           </h3>
         </Link>
