@@ -110,16 +110,20 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("en-US", {
   style: "currency",
   minimumFractionDigits: 2,
 });
+
 export function formatCurrency(
-  amount: number | string | null
+  amount: number | string | null | undefined
 ) {
-  if (typeof amount === "number") {
+  if (typeof amount === "number" && !isNaN(amount)) {
     return CURRENCY_FORMATTER.format(amount);
   } else if (typeof amount === "string") {
-    return CURRENCY_FORMATTER.format(Number(amount));
-  } else {
-    return "NaN";
+    const numValue = Number(amount);
+    if (!isNaN(numValue)) {
+      return CURRENCY_FORMATTER.format(numValue);
+    }
   }
+
+  return CURRENCY_FORMATTER.format(0);
 }
 
 export const calculateDiscountPrice = (

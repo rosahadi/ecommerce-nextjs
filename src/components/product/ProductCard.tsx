@@ -13,7 +13,7 @@ import AddToCart from "./AddToCart";
 
 const ProductCard = ({ product }: { product: Product }) => {
   return (
-    <Card className="group overflow-hidden rounded-lg border transition-all hover:shadow-md">
+    <Card className="group py-0 overflow-hidden rounded-lg border transition-all hover:shadow-md">
       <div className="relative aspect-[2/2.4] w-full">
         <Link
           href={`/product/${product.slug}`}
