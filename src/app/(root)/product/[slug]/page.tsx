@@ -9,11 +9,19 @@ import Rating from "@/components/product/Rating";
 import AddToCart from "@/components/product/AddToCart";
 import { Truck, RefreshCw } from "lucide-react";
 import { Size } from "@prisma/client";
+import ReviewList from "./ReviewList";
+import { auth } from "@/auth";
 
 const ProductDetailsPage = async (props: {
   params: Promise<{ slug: string }>;
 }) => {
   const { slug } = await props.params;
+
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  const firstInitial =
+    session?.user?.name?.charAt(0).toUpperCase() ?? "U";
 
   const product = await getProductBySlug(slug);
   if (!product) notFound();
@@ -261,7 +269,12 @@ const ProductDetailsPage = async (props: {
         <h2 className="text-2xl font-bold mb-6">
           Customer Reviews
         </h2>
-        review list
+        <ReviewList
+          userId={userId || ""}
+          productId={product.id}
+          productSlug={product.slug}
+          firstInitial={firstInitial}
+        />
       </section>
     </div>
   );
