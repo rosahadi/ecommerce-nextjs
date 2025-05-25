@@ -1,5 +1,5 @@
 import { Category } from "@/types";
-import Search from "./search";
+import Search from "./Search";
 
 const SearchWrapper = async ({
   categories,

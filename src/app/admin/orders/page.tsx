@@ -19,7 +19,7 @@ import { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Pagination from "@/components/Pagination";
-import DeleteDialog from "@/components/delete-dialog";
+import DeleteDialog from "@/components/DeleteDialog";
 import { requireAdmin } from "@/lib/auth-guard";
 import { Badge } from "@/components/ui/badge";
 import {

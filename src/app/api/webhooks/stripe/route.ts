@@ -23,15 +23,9 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET as string
     );
 
-    console.log("Webhook received:", event.type);
-
     // Handle the specific event type
     if (event.type === "charge.succeeded") {
       const { object } = event.data;
-      console.log(
-        "Processing charge.succeeded for order:",
-        object.metadata.orderId
-      );
 
       await updateOrderToPaid({
         orderId: object.metadata.orderId,
@@ -51,10 +45,6 @@ export async function POST(req: NextRequest) {
     } else if (event.type === "payment_intent.succeeded") {
       const paymentIntent = event.data
         .object as Stripe.PaymentIntent;
-      console.log(
-        "Processing payment_intent.succeeded for order:",
-        paymentIntent.metadata.orderId
-      );
 
       // Get the charge from the payment intent to get billing details
       const charges = await stripe.charges.list({

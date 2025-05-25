@@ -84,7 +84,6 @@ type OrderInformationProps = {
 export default async function PurchaseReceiptEmail({
   order,
 }: OrderInformationProps) {
-  // Ensure all order items have current data
   const orderItemsWithProductData = await Promise.all(
     order.orderitems.map(async (item) => {
       // If the item already has all required data, use it directly
@@ -118,8 +117,6 @@ export default async function PurchaseReceiptEmail({
       return item;
     })
   );
-
-  console.log(orderItemsWithProductData);
 
   return (
     <Html>

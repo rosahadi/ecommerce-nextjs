@@ -9,12 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
-import UserButton from "./user-button";
-import ModeToggle from "./mode-toggle";
+import UserButton from "./UserButton";
+import ModeToggle from "./ModeToggle";
 import MenuWrapper from "./MenuWrapper";
 import CartButton from "./CartButton";
 import { getAllCategories } from "@/lib/actions/product";
-import SearchWrapper from "./searchWrapper";
+import SearchWrapper from "./SearchWrapper";
 
 const Header = async () => {
   const categoriesData = await getAllCategories();

@@ -4,7 +4,7 @@ import { getUserById } from "@/lib/actions/user";
 import { ShippingAddress } from "@/types";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import CheckoutSteps from "@/components/checkout-steps";
+import CheckoutSteps from "@/components/CheckoutSteps";
 import Link from "next/link";
 import Image from "next/image";
 import { formatCurrency } from "@/lib/utils";

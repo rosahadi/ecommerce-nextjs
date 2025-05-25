@@ -9,7 +9,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { MenuIcon } from "lucide-react";
-import ModeToggle from "./mode-toggle";
+import ModeToggle from "./ModeToggle";
 import CartButton from "./CartButton";
 import { Category } from "@/types";
 

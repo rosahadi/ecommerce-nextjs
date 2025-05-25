@@ -78,7 +78,6 @@ const ProductForm = ({
   const onSubmit: SubmitHandler<
     InsertProduct | UpdateProduct
   > = async (values) => {
-    console.log("Form submission started", values);
     try {
       // Transform data before submission
       const transformedValues = {
@@ -100,10 +99,7 @@ const ProductForm = ({
               : values.discountPercent,
       };
 
-      console.log("Transformed values", transformedValues);
-
       if (type === "Update" && productId) {
-        console.log("Attempting to update product");
         const updatedValues = {
           ...transformedValues,
           id: productId,
@@ -112,7 +108,6 @@ const ProductForm = ({
         const res = await updateProduct(
           updatedValues as UpdateProduct
         );
-        console.log("Update response", res);
 
         if (!res.success) {
           toast("Error", { description: res.message });
@@ -121,11 +116,9 @@ const ProductForm = ({
           router.push("/admin/products");
         }
       } else if (type === "Create") {
-        console.log("Attempting to create product");
         const res = await createProduct(
           transformedValues as InsertProduct
         );
-        console.log("Create response", res);
         if (!res.success) {
           toast("Error", { description: res.message });
         } else {
@@ -656,10 +649,6 @@ const ProductForm = ({
                                 onClientUploadComplete={(
                                   res: { url: string }[]
                                 ) => {
-                                  console.log(
-                                    "Upload completed",
-                                    res
-                                  );
                                   form.setValue("images", [
                                     ...images,
                                     res[0].url,

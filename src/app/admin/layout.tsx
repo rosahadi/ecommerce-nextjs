@@ -1,6 +1,6 @@
 import { APP_NAME } from "@/lib/constants";
 import Link from "next/link";
-import MainNav from "./main-nav";
+import MainNav from "./MainNav";
 import MenuWrapper from "@/components/header/MenuWrapper";
 
 export default function AdminLayout({

@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Pagination from "@/components/Pagination";
-import DeleteDialog from "@/components/delete-dialog";
+import DeleteDialog from "@/components/DeleteDialog";
 import { requireAdmin } from "@/lib/auth-guard";
 import { Badge } from "@/components/ui/badge";
 import {

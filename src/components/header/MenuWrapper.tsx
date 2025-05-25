@@ -1,6 +1,6 @@
 import { Category } from "@/types";
 import Menu from "./Menu";
-import UserButton from "./user-button";
+import UserButton from "./UserButton";
 
 const MenuWrapper = ({
   categories,

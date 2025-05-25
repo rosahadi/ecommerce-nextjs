@@ -64,9 +64,6 @@ const AdminOverviewPage = async () => {
                 summary.totalSales?.toString() || 0
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +2.5% from last month
-            </p>
           </CardContent>
         </Card>
 
@@ -82,9 +79,6 @@ const AdminOverviewPage = async () => {
             <div className="text-3xl font-bold">
               {formatNumber(summary.ordersCount)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +18 new today
-            </p>
           </CardContent>
         </Card>
 
@@ -100,9 +94,6 @@ const AdminOverviewPage = async () => {
             <div className="text-3xl font-bold">
               {formatNumber(summary.usersCount)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +7 new signups
-            </p>
           </CardContent>
         </Card>
 
@@ -117,9 +108,6 @@ const AdminOverviewPage = async () => {
             <div className="text-3xl font-bold">
               {formatNumber(summary.productsCount)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +3 out of stock
-            </p>
           </CardContent>
         </Card>
       </div>

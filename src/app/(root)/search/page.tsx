@@ -21,7 +21,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { targetAudiences } from "@/lib/constants";
 
-const PAGE_SIZE = 2;
+const PAGE_SIZE = 4;
 
 const prices = [
   { name: "$1 to $50", value: "1-50" },

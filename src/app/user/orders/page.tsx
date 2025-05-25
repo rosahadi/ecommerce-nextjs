@@ -37,8 +37,6 @@ const OrdersPage = async (props: {
     page: Number(page) || 1,
   });
 
-  console.log(orders);
-
   return (
     <Card className="border-none shadow-lg bg-background">
       <CardHeader className="pb-0">
